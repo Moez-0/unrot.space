@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Topic } from '../data/topics';
 import { useSession } from '../context/SessionContext';
 import { ChainTracker } from '../components/TopicComponents';
-import { formatTime, cn } from '../lib/utils';
+import { formatTime, cn, getYouTubeId } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2 } from 'lucide-react';
@@ -249,12 +249,23 @@ export function TopicPage() {
                     {(topic.video_url || topic.image_url) && (
                       <div className="mb-24 neo-border-lg overflow-hidden bg-ink aspect-video relative group shadow-2xl">
                         {topic.video_url ? (
-                          <video 
-                            src={topic.video_url} 
-                            controls 
-                            className="w-full h-full object-cover"
-                            poster={topic.image_url}
-                          />
+                          getYouTubeId(topic.video_url) ? (
+                            <iframe 
+                              src={`https://www.youtube.com/embed/${getYouTubeId(topic.video_url)}?autoplay=0&rel=0`}
+                              title={topic.title}
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="w-full h-full"
+                            />
+                          ) : (
+                            <video 
+                              src={topic.video_url} 
+                              controls 
+                              className="w-full h-full object-cover"
+                              poster={topic.image_url}
+                            />
+                          )
                         ) : (
                           <img 
                             src={topic.image_url} 

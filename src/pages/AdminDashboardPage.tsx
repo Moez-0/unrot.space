@@ -592,15 +592,82 @@ export function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Related Topics (Comma Separated IDs)</label>
-                  <input 
-                    type="text"
-                    value={editingTopic?.related_ids?.join(', ') || ''}
-                    onChange={(e) => setEditingTopic(prev => ({ ...prev!, related_ids: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
-                    placeholder="id-1, id-2, id-3"
-                    className="w-full bg-white neo-border px-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
-                  />
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Related Topics</label>
+                  
+                  {/* Selected Topics Pills */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {editingTopic?.related_ids?.map(id => {
+                      const t = topics.find(topic => topic.id === id);
+                      return (
+                        <div key={id} className="bg-ink text-bg px-3 py-1 neo-border-sm flex items-center gap-2 text-[10px] font-bold uppercase">
+                          {t?.title || id}
+                          <button 
+                            type="button"
+                            onClick={() => setEditingTopic(prev => ({
+                              ...prev!,
+                              related_ids: prev?.related_ids?.filter(rid => rid !== id) || []
+                            }))}
+                            className="hover:text-accent transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {(!editingTopic?.related_ids || editingTopic.related_ids.length === 0) && (
+                      <p className="text-[10px] font-bold opacity-40 uppercase italic">No related topics selected</p>
+                    )}
+                  </div>
+
+                  {/* Search and Selection List */}
+                  <div className="neo-border bg-white overflow-hidden flex flex-col max-h-64">
+                    <div className="p-3 border-b-2 border-ink flex items-center gap-2 bg-ink/5">
+                      <Search size={14} className="opacity-40" />
+                      <input 
+                        type="text"
+                        placeholder="Search topics to relate..."
+                        className="bg-transparent w-full text-xs font-bold focus:outline-none"
+                        onChange={(e) => {
+                          const val = e.target.value.toLowerCase();
+                          const items = document.querySelectorAll('.topic-select-item');
+                          items.forEach((item: any) => {
+                            const text = item.innerText.toLowerCase();
+                            item.style.display = text.includes(val) ? 'flex' : 'none';
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="overflow-y-auto p-2 space-y-1">
+                      {topics
+                        .filter(t => t.id !== editingTopic?.id)
+                        .map(topic => {
+                          const isSelected = editingTopic?.related_ids?.includes(topic.id);
+                          return (
+                            <button
+                              key={topic.id}
+                              type="button"
+                              onClick={() => {
+                                setEditingTopic(prev => {
+                                  const current = prev?.related_ids || [];
+                                  const next = isSelected 
+                                    ? current.filter(id => id !== topic.id)
+                                    : [...current, topic.id];
+                                  return { ...prev!, related_ids: next };
+                                });
+                              }}
+                              className={cn(
+                                "topic-select-item w-full text-left px-3 py-2 text-[10px] font-bold uppercase flex items-center justify-between transition-colors",
+                                isSelected ? "bg-primary text-ink" : "hover:bg-ink/5"
+                              )}
+                            >
+                              <span>{topic.title}</span>
+                              {isSelected && <Plus size={12} className="rotate-45" />}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-8 flex gap-4">
