@@ -7,6 +7,7 @@ import { LandingPage } from './pages/LandingPage';
 import { ExplorePage } from './pages/ExplorePage';
 import { TopicPage } from './pages/TopicPage';
 import { SummaryPage } from './pages/SummaryPage';
+import { ResultsPage } from './pages/ResultsPage';
 import { AboutPage } from './pages/AboutPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ContactPage } from './pages/ContactPage';
@@ -41,6 +42,7 @@ function AppContent() {
             <Route path="/session" element={<TopicPage />} />
             <Route path="/topic/:id" element={<TopicPage />} />
             <Route path="/summary" element={<SummaryPage />} />
+            <Route path="/results/:id" element={<ResultsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/contact" element={<ContactPage />} />

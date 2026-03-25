@@ -23,7 +23,7 @@ interface SessionContextType {
   lastSessionStats: SessionStats | null;
   startSession: (initialTopicId?: string) => Promise<void>;
   endSession: () => void;
-  saveSession: (name?: string) => Promise<void>;
+  saveSession: (name?: string) => Promise<string | null>;
   addToChain: (topicId: string) => void;
   resetSession: () => void;
   isSaving: boolean;
@@ -132,8 +132,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setTotalScore(prev => prev + finalFocusScore);
   };
 
-  const saveSession = async (name?: string) => {
-    if (!lastSessionStats) return;
+  const saveSession = async (name?: string): Promise<string | null> => {
+    if (!lastSessionStats) return null;
     
     const finalName = name || userName || `Thinker_${Math.floor(Math.random() * 9000) + 1000}`;
     if (name) setUserName(name);
@@ -141,7 +141,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setIsSaving(true);
     try {
       // Save session to Supabase
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('sessions')
         .insert([
           {
@@ -151,11 +151,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             focus_score: lastSessionStats.focusScore,
             chain: lastSessionStats.chain,
           }
-        ]);
+        ])
+        .select('id')
+        .single();
         
       if (error) throw error;
+      return data.id;
     } catch (err) {
       console.error('Failed to save session:', err);
+      return null;
     } finally {
       setIsSaving(false);
     }

@@ -191,6 +191,10 @@ export function TopicPage() {
                 <Clock size={16} className="animate-pulse" />
                 <span className="font-mono font-black text-lg">{formatTime(elapsedTime)}</span>
               </div>
+              <div className="flex items-center gap-2 bg-accent text-bg px-4 py-2 neo-border-sm">
+                <Zap size={16} />
+                <span className="font-display font-black text-lg uppercase">Level {chain.length}</span>
+              </div>
               <div className="hidden sm:flex items-center gap-2 bg-primary px-3 py-1 neo-border-sm">
                 <div className="w-2 h-2 bg-ink rounded-full animate-ping" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Focus Active</span>

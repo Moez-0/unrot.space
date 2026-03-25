@@ -9,11 +9,15 @@ export function SummaryPage() {
   const { lastSessionStats, resetSession, level, progressToNextLevel, totalScore, userName, saveSession, isSaving } = useSession();
   const navigate = useNavigate();
   const [hasSaved, setHasSaved] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     // Automatically save session to leaderboard if name is set
     if (lastSessionStats && userName && !hasSaved && !isSaving) {
-      saveSession(userName).then(() => setHasSaved(true));
+      saveSession(userName).then((id) => {
+        setHasSaved(true);
+        if (id) setSessionId(id);
+      });
     }
   }, [lastSessionStats, userName, hasSaved, isSaving, saveSession]);
 
@@ -51,16 +55,21 @@ export function SummaryPage() {
   const comparisonPercent = Math.min(99, Math.floor(focusScore / 10) + 50);
 
   const handleShare = () => {
+    const shareUrl = sessionId 
+      ? `${window.location.origin}/results/${sessionId}`
+      : window.location.origin;
+      
     const text = `I escaped brain rot for ${Math.floor(timeSpent / 60)} minutes and earned ${earnedCount} achievements on Unrot! #unrot #focus`;
+    
     if (navigator.share) {
       navigator.share({
         title: 'Unrot Session Summary',
         text: text,
-        url: window.location.origin,
+        url: shareUrl,
       });
     } else {
-      navigator.clipboard.writeText(text);
-      alert("Copied to clipboard: " + text);
+      navigator.clipboard.writeText(`${text}\n\nCheck my results: ${shareUrl}`);
+      alert("Copied to clipboard: " + text + "\nLink: " + shareUrl);
     }
   };
 
@@ -170,6 +179,19 @@ export function SummaryPage() {
             <Share2 size={24} />
             Share Result
           </button>
+          {sessionId && (
+            <button 
+              onClick={() => {
+                const url = `${window.location.origin}/results/${sessionId}`;
+                navigator.clipboard.writeText(url);
+                alert("Link copied: " + url);
+              }}
+              className="neo-button bg-ink text-bg px-8 py-4 flex items-center justify-center gap-3 font-display uppercase text-xl"
+            >
+              <Zap size={24} className="text-primary" />
+              Copy Badge Link
+            </button>
+          )}
           <button 
             onClick={() => {
               resetSession();
