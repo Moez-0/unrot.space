@@ -1,15 +1,16 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
-# This handles the React Router redirects
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# This points the webhook URL to the Netlify Function
+# Specific API redirects MUST come before the catch-all /*
 [[redirects]]
   from = "/api/webhooks/polar"
   to = "/.netlify/functions/polar-webhook"
+  status = 200
+
+# Catch-all for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
