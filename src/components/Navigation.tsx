@@ -7,7 +7,7 @@ import { Menu, X, Zap } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 
 export function Navbar() {
-  const { isActive, startSession, level, setUserName } = useSession();
+  const { isActive, startSession, level, setUserName, user, profile, signOut, isPro } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -15,6 +15,7 @@ export function Navbar() {
 
   const navLinks = [
     { name: 'Leaderboard', path: '/leaderboard' },
+    { name: 'Pricing', path: '/pricing' },
     { name: 'About', path: '/about' },
   ];
 
@@ -51,6 +52,11 @@ export function Navbar() {
             <span className="text-[8px] uppercase font-black tracking-widest">LVL</span>
             <span className="font-display text-sm">{level}</span>
           </div>
+          {isPro && (
+            <div className="hidden sm:flex items-center gap-1 bg-accent text-bg px-2 py-0.5 neo-border-sm">
+              <span className="text-[8px] uppercase font-black tracking-widest">PRO</span>
+            </div>
+          )}
         </div>
 
         {/* Desktop Menu */}
@@ -77,6 +83,27 @@ export function Navbar() {
           >
             Explore
           </Link>
+
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                {profile?.user_name || user.email?.split('@')[0]}
+              </span>
+              <button
+                onClick={() => signOut()}
+                className="text-[10px] font-black uppercase tracking-widest hover:text-accent transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth"
+              className="text-xs uppercase tracking-widest font-black transition-all hover:text-accent"
+            >
+              Sign In
+            </Link>
+          )}
 
           <button
             onClick={handleStartSession}

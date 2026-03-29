@@ -55,9 +55,10 @@ export function SummaryPage() {
   const comparisonPercent = Math.min(99, Math.floor(focusScore / 10) + 50);
 
   const handleShare = () => {
+    const domain = 'https://unrot.space';
     const shareUrl = sessionId 
-      ? `${window.location.origin}/results/${sessionId}`
-      : window.location.origin;
+      ? `${domain}/results/${sessionId}`
+      : domain;
       
     const text = `I escaped brain rot for ${Math.floor(timeSpent / 60)} minutes and earned ${earnedCount} achievements on Unrot! #unrot #focus`;
     
@@ -182,7 +183,7 @@ export function SummaryPage() {
           {sessionId && (
             <button 
               onClick={() => {
-                const url = `${window.location.origin}/results/${sessionId}`;
+                const url = `https://unrot.space/results/${sessionId}`;
                 navigator.clipboard.writeText(url);
                 alert("Link copied: " + url);
               }}

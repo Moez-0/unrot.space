@@ -7,6 +7,7 @@ export interface Topic {
   category: string;
   image_url?: string;
   video_url?: string;
+  is_pro?: boolean;
 }
 
 export const topics: Topic[] = [

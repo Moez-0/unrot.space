@@ -358,6 +358,7 @@ export function AdminDashboardPage() {
                     <tr>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Topic</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Category</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Tier</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Created</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black text-right">Actions</th>
                     </tr>
@@ -386,6 +387,17 @@ export function AdminDashboardPage() {
                           <span className="bg-secondary/10 text-secondary text-[10px] font-black uppercase px-2 py-1 neo-border-sm">
                             {topic.category}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {topic.is_pro ? (
+                            <span className="bg-accent text-bg text-[10px] font-black uppercase px-2 py-1 neo-border-sm">
+                              Pro
+                            </span>
+                          ) : (
+                            <span className="bg-ink/5 text-ink/40 text-[10px] font-black uppercase px-2 py-1 neo-border-sm">
+                              Free
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-xs font-bold opacity-60">
                           {new Date(topic.created_at).toLocaleDateString()}
@@ -569,6 +581,31 @@ export function AdminDashboardPage() {
                       <option>History</option>
                       <option>Art</option>
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Tier</label>
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setEditingTopic(prev => ({ ...prev!, is_pro: false }))}
+                        className={cn(
+                          "flex-grow py-3 px-4 font-bold text-xs uppercase tracking-widest neo-border-sm transition-all",
+                          !editingTopic?.is_pro ? "bg-ink text-bg" : "bg-white text-ink hover:bg-ink/5"
+                        )}
+                      >
+                        Free
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingTopic(prev => ({ ...prev!, is_pro: true }))}
+                        className={cn(
+                          "flex-grow py-3 px-4 font-bold text-xs uppercase tracking-widest neo-border-sm transition-all",
+                          editingTopic?.is_pro ? "bg-accent text-bg" : "bg-white text-ink hover:bg-ink/5"
+                        )}
+                      >
+                        Pro
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Image URL</label>

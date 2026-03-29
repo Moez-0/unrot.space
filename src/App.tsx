@@ -14,6 +14,8 @@ import { ContactPage } from './pages/ContactPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AuthPage } from './pages/AuthPage';
+import { PricingPage } from './pages/PricingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AnimatePresence } from 'motion/react';
 
@@ -49,6 +51,8 @@ function AppContent() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </AnimatePresence>

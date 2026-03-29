@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, Profile } from '../lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 interface SessionStats {
   timeSpent: number;
@@ -27,6 +28,10 @@ interface SessionContextType {
   addToChain: (topicId: string) => void;
   resetSession: () => void;
   isSaving: boolean;
+  user: User | null;
+  profile: Profile | null;
+  signOut: () => Promise<void>;
+  isPro: boolean;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -38,6 +43,72 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [chain, setChain] = useState<string[]>([]);
   const [depth, setDepth] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    } else {
+      setProfile(null);
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create it
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: user.id,
+              user_name: user.user_metadata.user_name || user.email?.split('@')[0] || 'Thinker',
+              total_score: 0,
+              subscription_tier: 'free'
+            }
+          ])
+          .select()
+          .single();
+
+        if (!createError) setProfile(newProfile);
+      } else if (data) {
+        setProfile(data);
+        setTotalScore(data.total_score);
+        setUserNameState(data.user_name);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const isPro = profile?.subscription_tier === 'pro';
+
   const [lastSessionStats, setLastSessionStats] = useState<SessionStats | null>(() => {
     const saved = localStorage.getItem('unrot_last_session_stats');
     return saved ? JSON.parse(saved) : null;
@@ -51,14 +122,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return saved ? parseInt(saved, 10) : 0;
   });
 
-  const setUserName = (name: string) => {
+  const setUserName = async (name: string) => {
     setUserNameState(name);
     localStorage.setItem('unrot_user_name', name);
+    if (user) {
+      await supabase.from('profiles').update({ user_name: name }).eq('id', user.id);
+      fetchProfile();
+    }
   };
 
   useEffect(() => {
     localStorage.setItem('unrot_total_score', totalScore.toString());
-  }, [totalScore]);
+    if (user && profile && totalScore !== profile.total_score) {
+      supabase.from('profiles').update({ total_score: totalScore }).eq('id', user.id).then(() => {
+        // Optionally refresh profile
+      });
+    }
+  }, [totalScore, user, profile]);
 
   useEffect(() => {
     let interval: number | undefined;
@@ -145,6 +225,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         .from('sessions')
         .insert([
           {
+            user_id: user?.id || null,
             user_name: finalName,
             time_spent: lastSessionStats.timeSpent,
             depth: lastSessionStats.depth,
@@ -215,6 +296,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         addToChain,
         resetSession,
         isSaving,
+        user,
+        profile,
+        signOut,
+        isPro,
       }}
     >
       {children}

@@ -7,7 +7,7 @@ import { ChainTracker } from '../components/TopicComponents';
 import { formatTime, cn, getYouTubeId } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2, Trophy } from 'lucide-react';
 import { StartSessionModal } from '../components/StartSessionModal';
 import Markdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -193,8 +193,14 @@ export function TopicPage() {
               </div>
               <div className="flex items-center gap-2 bg-accent text-bg px-4 py-2 neo-border-sm">
                 <Zap size={16} />
-                <span className="font-display font-black text-lg uppercase">Level {chain.length}</span>
+                <span className="font-display font-black text-lg uppercase">Depth {chain.length}</span>
               </div>
+              {topic?.is_pro && (
+                <div className="flex items-center gap-2 bg-primary text-ink px-4 py-2 neo-border-sm">
+                  <Trophy size={16} />
+                  <span className="font-display font-black text-lg uppercase">Pro</span>
+                </div>
+              )}
               <div className="hidden sm:flex items-center gap-2 bg-primary px-3 py-1 neo-border-sm">
                 <div className="w-2 h-2 bg-ink rounded-full animate-ping" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Focus Active</span>

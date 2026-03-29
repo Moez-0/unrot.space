@@ -19,6 +19,7 @@ export interface SupabaseTopic {
   video_url?: string;
   related_ids: string[];
   created_at: string;
+  is_pro: boolean;
 }
 
 export interface SupabaseSession {
@@ -29,5 +30,13 @@ export interface SupabaseSession {
   depth: number;
   focus_score: number;
   chain: string[];
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  user_name: string;
+  total_score: number;
+  subscription_tier: 'free' | 'pro';
   created_at: string;
 }

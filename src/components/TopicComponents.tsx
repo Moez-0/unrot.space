@@ -29,7 +29,7 @@ export function ChainTracker({ chain }: { chain: string[] }) {
   );
 }
 
-export function TopicCard({ topic, className }: { topic: Topic; className?: string }) {
+export function TopicCard({ topic, className }: { topic: any; className?: string }) {
   const categoryColors: Record<string, string> = {
     'Philosophy': 'bg-primary',
     'Science': 'bg-secondary',
@@ -38,13 +38,17 @@ export function TopicCard({ topic, className }: { topic: Topic; className?: stri
   };
 
   return (
-    <Link
-      to={`/topic/${topic.id}`}
+    <div
       className={cn(
-        "neo-card group flex flex-col h-full bg-white",
+        "neo-card group flex flex-col h-full bg-white relative",
         className
       )}
     >
+      {topic.is_pro && (
+        <div className="absolute top-4 right-4 z-10 bg-accent text-bg px-2 py-0.5 neo-border-sm text-[8px] font-black uppercase tracking-widest">
+          Pro
+        </div>
+      )}
       {topic.image_url && (
         <div className="mb-4 neo-border overflow-hidden aspect-video bg-ink">
           <img 
@@ -73,6 +77,6 @@ export function TopicCard({ topic, className }: { topic: Topic; className?: stri
           →
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

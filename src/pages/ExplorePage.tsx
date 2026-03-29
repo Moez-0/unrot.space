@@ -11,18 +11,26 @@ import { StartSessionModal } from '../components/StartSessionModal';
 import { cn } from '../lib/utils';
 
 export function ExplorePage() {
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topics, setTopics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isActive, startSession, setUserName, userName } = useSession();
+  const { isActive, startSession, setUserName, userName, isPro } = useSession();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      setShowSuccess(true);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     async function fetchTopics() {
       try {
         const { data, error } = await supabase
@@ -30,11 +38,7 @@ export function ExplorePage() {
           .select('*');
 
         if (data && !error) {
-          const formatted = data.map(t => ({
-            ...t,
-            related: t.related_ids || []
-          }));
-          setTopics(formatted);
+          setTopics(data);
         }
       } catch (err) {
         console.error('Error fetching topics:', err);
@@ -46,14 +50,19 @@ export function ExplorePage() {
     fetchTopics();
   }, []);
 
-  const handleTopicClick = async (topicId: string) => {
+  const handleTopicClick = async (topic: any) => {
+    if (topic.is_pro && !isPro) {
+      navigate('/pricing');
+      return;
+    }
+
     if (isActive) {
-      navigate(`/topic/${topicId}`);
+      navigate(`/topic/${topic.id}`);
     } else if (userName) {
-      await startSession(topicId);
-      navigate(`/topic/${topicId}`);
+      await startSession(topic.id);
+      navigate(`/topic/${topic.id}`);
     } else {
-      setSelectedTopicId(topicId);
+      setSelectedTopicId(topic.id);
       setIsModalOpen(true);
     }
   };
@@ -99,6 +108,44 @@ export function ExplorePage() {
         onClose={() => setIsModalOpen(false)} 
         onConfirm={handleConfirmName} 
       />
+
+      <AnimatePresence>
+        {showSuccess && (
+          <div className="max-w-7xl mx-auto px-6 pt-24 -mb-12">
+            <motion.div
+              initial={{ height: 0, opacity: 0, y: -20 }}
+              animate={{ height: 'auto', opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -20 }}
+              className="overflow-hidden"
+            >
+              <div className="neo-card bg-primary p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative mb-8">
+                <button 
+                  onClick={() => setShowSuccess(false)}
+                  className="absolute top-4 right-4 hover:text-accent transition-colors"
+                >
+                  <X size={24} />
+                </button>
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 bg-ink text-bg flex items-center justify-center neo-border font-display text-3xl shrink-0">
+                    <Zap size={32} className="text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-display uppercase leading-none mb-2">Welcome to <span className="text-accent">Pro.</span></h2>
+                    <p className="font-bold uppercase text-xs tracking-widest opacity-60">Your elite thinker status is now active. All topics unlocked.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowSuccess(false)}
+                  className="neo-button bg-ink text-bg px-8 py-3 font-display uppercase text-lg"
+                >
+                  Let's Dive In
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="pt-24 pb-20">
         <header className="max-w-7xl mx-auto px-6 mb-12">
           <motion.div
@@ -214,7 +261,7 @@ export function ExplorePage() {
                           layout
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          onClick={() => handleTopicClick(topic.id)} 
+                          onClick={() => handleTopicClick(topic)} 
                           className="cursor-pointer"
                         >
                           <div className="pointer-events-none">
