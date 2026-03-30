@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion } from 'motion/react';
 import { User, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
@@ -12,6 +12,9 @@ export function AuthPage() {
   const [userName, setUserName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectPath = searchParams.get('redirect') || '/';
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,13 +23,13 @@ export function AuthPage() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+        if (authError) throw authError;
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -35,10 +38,10 @@ export function AuthPage() {
             },
           },
         });
-        if (error) throw error;
+        if (authError) throw authError;
         alert('Check your email for the confirmation link!');
       }
-      navigate('/');
+      navigate(redirectPath);
     } catch (err: any) {
       setError(err.message);
     } finally {

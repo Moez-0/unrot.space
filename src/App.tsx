@@ -16,6 +16,8 @@ import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AuthPage } from './pages/AuthPage';
 import { PricingPage } from './pages/PricingPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { SuccessPage } from './pages/SuccessPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AnimatePresence } from 'motion/react';
 
@@ -53,6 +55,8 @@ function AppContent() {
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/success" element={<SuccessPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </AnimatePresence>

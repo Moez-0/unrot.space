@@ -15,7 +15,7 @@ export function Navbar() {
 
   const navLinks = [
     { name: 'Leaderboard', path: '/leaderboard' },
-    { name: 'Pricing', path: '/pricing' },
+    { name: isPro ? 'Billing' : 'Pricing', path: isPro ? 'https://buy.polar.sh/customer-portal' : '/pricing', external: isPro },
     { name: 'About', path: '/about' },
   ];
 
@@ -62,16 +62,28 @@ export function Navbar() {
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={cn(
-                "text-xs uppercase tracking-widest font-black transition-all hover:text-accent",
-                location.pathname === link.path ? "text-accent underline underline-offset-4" : "text-ink"
-              )}
-            >
-              {link.name}
-            </Link>
+            link.external ? (
+              <a
+                key={link.path}
+                href={link.path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs uppercase tracking-widest font-black transition-all hover:text-accent text-ink"
+              >
+                {link.name}
+              </a>
+            ) : (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={cn(
+                  "text-xs uppercase tracking-widest font-black transition-all hover:text-accent",
+                  location.pathname === link.path ? "text-accent underline underline-offset-4" : "text-ink"
+                )}
+              >
+                {link.name}
+              </Link>
+            )
           ))}
           
           <Link
@@ -86,15 +98,23 @@ export function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-4">
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                {profile?.user_name || user.email?.split('@')[0]}
-              </span>
-              <button
-                onClick={() => signOut()}
-                className="text-[10px] font-black uppercase tracking-widest hover:text-accent transition-colors"
+              <Link 
+                to="/profile"
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-widest hover:text-accent transition-colors",
+                  location.pathname === '/profile' ? "text-accent" : "opacity-60"
+                )}
               >
-                Sign Out
-              </button>
+                {profile?.user_name || user.email?.split('@')[0]}
+              </Link>
+              {!isPro && (
+                <Link 
+                  to="/pricing"
+                  className="bg-accent text-bg px-3 py-1 neo-border-sm text-[8px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
+                >
+                  Upgrade
+                </Link>
+              )}
             </div>
           ) : (
             <Link

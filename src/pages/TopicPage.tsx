@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Topic } from '../data/topics';
 import { useSession } from '../context/SessionContext';
@@ -7,7 +7,7 @@ import { ChainTracker } from '../components/TopicComponents';
 import { formatTime, cn, getYouTubeId } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2, Trophy } from 'lucide-react';
+import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2, Trophy, Wind, Music, Coffee, Headphones, Volume2, VolumeX } from 'lucide-react';
 import { StartSessionModal } from '../components/StartSessionModal';
 import Markdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -16,12 +16,33 @@ import rehypeKatex from 'rehype-katex';
 export function TopicPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, setUserName, userName } = useSession();
+  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, setUserName, userName, isPro, focusMode, setFocusMode } = useSession();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [relatedTopics, setRelatedTopics] = useState<Topic[]>([]);
   const [furtherReading, setFurtherReading] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const focusModes = [
+    { id: 'default', name: 'Standard', icon: Zap, color: 'bg-primary' },
+    { id: 'lofi', name: 'Lo-Fi Beats', icon: Music, color: 'bg-secondary', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+    { id: 'nature', name: 'Nature', icon: Wind, color: 'bg-green-400', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+    { id: 'deep-focus', name: 'Deep Focus', icon: Headphones, color: 'bg-accent', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+  ];
+
+  useEffect(() => {
+    if (audioRef.current) {
+      const mode = focusModes.find(m => m.id === focusMode);
+      if (mode?.audio && !isMuted && isActive) {
+        audioRef.current.src = mode.audio;
+        audioRef.current.play().catch(e => console.log('Audio play blocked', e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [focusMode, isMuted, isActive]);
 
   useEffect(() => {
     async function fetchTopic() {
@@ -171,11 +192,22 @@ export function TopicPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="min-h-screen bg-bg flex flex-col"
+        className={cn(
+          "min-h-screen bg-bg flex flex-col transition-colors duration-1000",
+          focusMode === 'lofi' && "bg-secondary/5",
+          focusMode === 'nature' && "bg-green-50",
+          focusMode === 'deep-focus' && "bg-accent/5"
+        )}
       >
+        <audio ref={audioRef} loop />
         <div className="fixed top-0 left-0 w-full h-1 z-[60] bg-ink/5">
           <motion.div 
-            className="h-full bg-accent origin-left"
+            className={cn(
+              "h-full origin-left",
+              focusMode === 'default' ? "bg-accent" : 
+              focusMode === 'lofi' ? "bg-secondary" :
+              focusMode === 'nature' ? "bg-green-400" : "bg-accent"
+            )}
             style={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
             viewport={{ once: false }}
@@ -195,16 +227,38 @@ export function TopicPage() {
                 <Zap size={16} />
                 <span className="font-display font-black text-lg uppercase">Depth {chain.length}</span>
               </div>
-              {topic?.is_pro && (
+              {isPro && (
                 <div className="flex items-center gap-2 bg-primary text-ink px-4 py-2 neo-border-sm">
                   <Trophy size={16} />
                   <span className="font-display font-black text-lg uppercase">Pro</span>
                 </div>
               )}
-              <div className="hidden sm:flex items-center gap-2 bg-primary px-3 py-1 neo-border-sm">
-                <div className="w-2 h-2 bg-ink rounded-full animate-ping" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Focus Active</span>
-              </div>
+              
+              {/* Focus Mode Selector (Pro Only) */}
+              {isPro && (
+                <div className="hidden lg:flex items-center gap-1 bg-white neo-border-sm p-1">
+                  {focusModes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setFocusMode(mode.id as any)}
+                      className={cn(
+                        "p-2 transition-all hover:scale-110",
+                        focusMode === mode.id ? cn(mode.color, "text-bg") : "text-ink/40 hover:text-ink"
+                      )}
+                      title={mode.name}
+                    >
+                      <mode.icon size={16} />
+                    </button>
+                  ))}
+                  <div className="w-[1px] h-4 bg-ink/10 mx-1" />
+                  <button 
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="p-2 text-ink/40 hover:text-ink"
+                  >
+                    {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
+                </div>
+              )}
             </div>
 
             <button 

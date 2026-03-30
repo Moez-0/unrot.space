@@ -13,12 +13,12 @@ export function LeaderboardPage() {
       try {
         const { data, error } = await supabase
           .from('sessions')
-          .select('*')
+          .select('*, profiles(subscription_tier)')
           .order('focus_score', { ascending: false })
-          .limit(100); // Fetch more to filter unique users in memory
+          .limit(100);
 
         if (data) {
-          const uniqueLeaders: SupabaseSession[] = [];
+          const uniqueLeaders: any[] = [];
           const seenUsers = new Set();
           
           for (const session of data) {
@@ -81,7 +81,14 @@ export function LeaderboardPage() {
                         {i + 1}
                       </div>
                       <div>
-                        <div className="font-display uppercase text-xl">{leader.user_name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-display uppercase text-xl">{leader.user_name}</div>
+                          {(leader as any).profiles?.subscription_tier === 'pro' && (
+                            <div className="bg-accent text-bg px-1.5 py-0.5 neo-border-sm text-[8px] font-black uppercase tracking-widest">
+                              Pro
+                            </div>
+                          )}
+                        </div>
                         <div className="text-[10px] font-black opacity-40 uppercase tracking-widest">{formatTime(leader.time_spent)}</div>
                       </div>
                     </div>

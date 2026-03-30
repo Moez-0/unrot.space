@@ -31,7 +31,11 @@ interface SessionContextType {
   user: User | null;
   profile: Profile | null;
   signOut: () => Promise<void>;
+  fetchProfile: () => Promise<void>;
   isPro: boolean;
+  sessionLimitReached: boolean;
+  focusMode: 'default' | 'lofi' | 'nature' | 'deep-focus';
+  setFocusMode: (mode: 'default' | 'lofi' | 'nature' | 'deep-focus') => void;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -45,6 +49,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [sessionCount, setSessionCount] = useState(0);
+  const [focusMode, setFocusMode] = useState<'default' | 'lofi' | 'nature' | 'deep-focus'>('default');
+
+  useEffect(() => {
+    // Check session count for today
+    const lastReset = localStorage.getItem('unrot_session_reset_date');
+    const today = new Date().toDateString();
+    
+    if (lastReset !== today) {
+      localStorage.setItem('unrot_session_reset_date', today);
+      localStorage.setItem('unrot_session_count', '0');
+      setSessionCount(0);
+    } else {
+      const savedCount = localStorage.getItem('unrot_session_count');
+      setSessionCount(savedCount ? parseInt(savedCount, 10) : 0);
+    }
+  }, []);
+
+  const isPro = profile?.subscription_tier === 'pro';
+  const sessionLimitReached = !isPro && sessionCount >= 3;
 
   useEffect(() => {
     // Get initial session
@@ -63,6 +87,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       fetchProfile();
+
+      // Listen for real-time changes to the user's profile
+      const channel = supabase
+        .channel(`profile-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log('Profile updated in real-time:', payload.new);
+            setProfile(payload.new as Profile);
+            setTotalScore(payload.new.total_score);
+            setUserNameState(payload.new.user_name);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       setProfile(null);
     }
@@ -106,8 +154,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
   };
-
-  const isPro = profile?.subscription_tier === 'pro';
 
   const [lastSessionStats, setLastSessionStats] = useState<SessionStats | null>(() => {
     const saved = localStorage.getItem('unrot_last_session_stats');
@@ -157,6 +203,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isEnding, setIsEnding] = useState(false);
 
   const startSession = async (initialTopicId?: string) => {
+    if (sessionLimitReached) {
+      throw new Error('Session limit reached. Upgrade to Pro for unlimited sessions.');
+    }
+
     // If we were in ending state, reset it now to allow a new session
     if (isEnding) {
       setIsEnding(false);
@@ -186,7 +236,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setElapsedTime(0);
     setChain([topicId]);
     setDepth(0);
-    // Don't clear lastSessionStats here, keep it until we have a new one or it's explicitly reset
+    
+    // Increment session count
+    const newCount = sessionCount + 1;
+    setSessionCount(newCount);
+    localStorage.setItem('unrot_session_count', newCount.toString());
   };
 
   const endSession = () => {
@@ -299,7 +353,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         user,
         profile,
         signOut,
+        fetchProfile,
         isPro,
+        sessionLimitReached,
+        focusMode,
+        setFocusMode,
       }}
     >
       {children}
