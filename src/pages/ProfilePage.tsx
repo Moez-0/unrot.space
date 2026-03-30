@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useSession } from '../context/SessionContext';
 import { supabase } from '../lib/supabase';
-import { User, Mail, Shield, Zap, CreditCard, LogOut, Check, AlertCircle, Loader2, RefreshCw, X } from 'lucide-react';
+import { User, Mail, Shield, Zap, CreditCard, LogOut, Check, AlertCircle, Loader2, RefreshCw, X, History, ArrowRight } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
+import { formatTime } from '../lib/utils';
 
 export function ProfilePage() {
   const { user, profile, signOut, isPro, fetchProfile } = useSession();
@@ -11,6 +13,8 @@ export function ProfilePage() {
   const [userName, setUserName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
@@ -18,6 +22,30 @@ export function ProfilePage() {
       setUserName(profile.user_name);
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (user && isPro) {
+      fetchSessions();
+    }
+  }, [user, isPro]);
+
+  const fetchSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (data) setSessions(data);
+    } catch (err) {
+      console.error('Error fetching sessions:', err);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -196,6 +224,58 @@ export function ProfilePage() {
                 </div>
               </div>
             </motion.div>
+
+            {/* Session History (Pro Feature) */}
+            {isPro && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="neo-card p-10 bg-white"
+              >
+                <div className="flex items-center justify-between mb-8 border-b-2 border-ink/10 pb-4">
+                  <h3 className="text-3xl font-display uppercase">Session History</h3>
+                  <div className="bg-accent text-bg px-2 py-0.5 neo-border-sm text-[8px] font-black uppercase tracking-widest">PRO</div>
+                </div>
+                
+                {loadingSessions ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="animate-spin text-accent" size={32} />
+                  </div>
+                ) : sessions.length > 0 ? (
+                  <div className="space-y-4">
+                    {sessions.map((session) => (
+                      <Link 
+                        key={session.id} 
+                        to={`/results/${session.id}`}
+                        className="flex items-center justify-between p-4 bg-bg neo-border-sm hover:bg-primary/10 transition-colors group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-white neo-border-sm flex items-center justify-center">
+                            <History size={16} className="text-ink/40" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-widest">{new Date(session.created_at).toLocaleDateString()}</div>
+                            <div className="text-[10px] font-bold opacity-40 uppercase">{formatTime(session.time_spent)} • Depth {session.depth}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="text-lg font-display text-accent">{session.focus_score}</div>
+                            <div className="text-[8px] font-black uppercase opacity-40">Score</div>
+                          </div>
+                          <ArrowRight size={16} className="text-ink/20 group-hover:text-accent transition-colors" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 opacity-40">
+                    <p className="text-xs font-black uppercase tracking-widest">No sessions recorded yet.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

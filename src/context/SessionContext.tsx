@@ -24,7 +24,7 @@ interface SessionContextType {
   lastSessionStats: SessionStats | null;
   startSession: (initialTopicId?: string) => Promise<void>;
   endSession: () => void;
-  saveSession: (name?: string) => Promise<string | null>;
+  saveSession: () => Promise<string | null>;
   addToChain: (topicId: string) => void;
   resetSession: () => void;
   isSaving: boolean;
@@ -68,7 +68,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isPro = profile?.subscription_tier === 'pro';
-  const sessionLimitReached = !isPro && sessionCount >= 3;
+  const sessionLimitReached = !isPro && sessionCount >= 1000;
 
   useEffect(() => {
     // Get initial session
@@ -127,12 +127,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       if (error && error.code === 'PGRST116') {
         // Profile doesn't exist, create it
+        const name = user.user_metadata.user_name || user.email?.split('@')[0] || 'Thinker';
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert([
             {
               id: user.id,
-              user_name: user.user_metadata.user_name || user.email?.split('@')[0] || 'Thinker',
+              user_name: name,
               total_score: 0,
               subscription_tier: 'free'
             }
@@ -140,11 +141,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           .select()
           .single();
 
-        if (!createError) setProfile(newProfile);
+        if (!createError && newProfile) {
+          setProfile(newProfile);
+          setUserNameState(newProfile.user_name);
+          localStorage.setItem('unrot_user_name', newProfile.user_name);
+        }
       } else if (data) {
         setProfile(data);
         setTotalScore(data.total_score);
         setUserNameState(data.user_name);
+        localStorage.setItem('unrot_user_name', data.user_name);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -162,6 +168,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [userName, setUserNameState] = useState(() => {
     return localStorage.getItem('unrot_user_name') || '';
   });
+
+  useEffect(() => {
+    if (user && !userName) {
+      const name = user.user_metadata.user_name || user.email?.split('@')[0] || 'Thinker';
+      setUserNameState(name);
+      localStorage.setItem('unrot_user_name', name);
+    }
+  }, [user, userName]);
 
   const [totalScore, setTotalScore] = useState(() => {
     const saved = localStorage.getItem('unrot_total_score');
@@ -203,6 +217,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isEnding, setIsEnding] = useState(false);
 
   const startSession = async (initialTopicId?: string) => {
+    if (!user) {
+      throw new Error('Authentication required to start a session.');
+    }
+
     if (sessionLimitReached) {
       throw new Error('Session limit reached. Upgrade to Pro for unlimited sessions.');
     }
@@ -266,11 +284,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setTotalScore(prev => prev + finalFocusScore);
   };
 
-  const saveSession = async (name?: string): Promise<string | null> => {
-    if (!lastSessionStats) return null;
+  const saveSession = async (): Promise<string | null> => {
+    if (!lastSessionStats || !user) return null;
     
-    const finalName = name || userName || `Thinker_${Math.floor(Math.random() * 9000) + 1000}`;
-    if (name) setUserName(name);
+    const finalName = profile?.user_name || userName || user.email?.split('@')[0] || 'Thinker';
 
     setIsSaving(true);
     try {
@@ -279,7 +296,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         .from('sessions')
         .insert([
           {
-            user_id: user?.id || null,
+            user_id: user.id,
             user_name: finalName,
             time_spent: lastSessionStats.timeSpent,
             depth: lastSessionStats.depth,

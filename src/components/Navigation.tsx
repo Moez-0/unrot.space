@@ -3,15 +3,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, Zap } from 'lucide-react';
-import { StartSessionModal } from './StartSessionModal';
+import { Menu, X, Zap, Sparkles } from 'lucide-react';
 
 export function Navbar() {
-  const { isActive, startSession, level, setUserName, user, profile, signOut, isPro } = useSession();
+  const { isActive, startSession, user, profile, isPro } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const navLinks = [
     { name: 'Leaderboard', path: '/leaderboard' },
@@ -22,26 +20,17 @@ export function Navbar() {
   const handleStartSession = () => {
     if (isActive) {
       navigate('/session');
+    } else if (user) {
+      startSession();
+      navigate('/session');
     } else {
-      setIsModalOpen(true);
+      navigate('/auth');
     }
     setIsOpen(false);
   };
 
-  const handleConfirmName = (name: string) => {
-    setUserName(name);
-    startSession();
-    setIsModalOpen(false);
-    navigate('/session');
-  };
-
   return (
     <>
-      <StartSessionModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onConfirm={handleConfirmName} 
-      />
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50">
         <div className="bg-white neo-border px-6 h-14 flex items-center justify-between relative z-50">
         <div className="flex items-center gap-4">
@@ -58,28 +47,16 @@ export function Navbar() {
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            link.external ? (
-              <a
-                key={link.path}
-                href={link.path}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs uppercase tracking-widest font-black transition-all hover:text-accent text-ink"
-              >
-                {link.name}
-              </a>
-            ) : (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={cn(
-                  "text-xs uppercase tracking-widest font-black transition-all hover:text-accent",
-                  location.pathname === link.path ? "text-accent underline underline-offset-4" : "text-ink"
-                )}
-              >
-                {link.name}
-              </Link>
-            )
+            <Link
+              key={link.path}
+              to={link.path}
+              className={cn(
+                "text-xs uppercase tracking-widest font-black transition-all hover:text-accent",
+                location.pathname === link.path ? "text-accent underline underline-offset-4" : "text-ink"
+              )}
+            >
+              {link.name}
+            </Link>
           ))}
           
           <Link

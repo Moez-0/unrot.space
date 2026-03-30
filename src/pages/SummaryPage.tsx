@@ -6,20 +6,20 @@ import { motion } from 'motion/react';
 import { Share2, Trophy, Home, Award, Zap } from 'lucide-react';
 
 export function SummaryPage() {
-  const { lastSessionStats, resetSession, level, progressToNextLevel, totalScore, userName, saveSession, isSaving } = useSession();
+  const { lastSessionStats, resetSession, level, progressToNextLevel, totalScore, saveSession, isSaving } = useSession();
   const navigate = useNavigate();
   const [hasSaved, setHasSaved] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     // Automatically save session to leaderboard if name is set
-    if (lastSessionStats && userName && !hasSaved && !isSaving) {
-      saveSession(userName).then((id) => {
+    if (lastSessionStats && !hasSaved && !isSaving) {
+      saveSession().then((id) => {
         setHasSaved(true);
         if (id) setSessionId(id);
       });
     }
-  }, [lastSessionStats, userName, hasSaved, isSaving, saveSession]);
+  }, [lastSessionStats, hasSaved, isSaving, saveSession]);
 
   if (!lastSessionStats) {
     return (

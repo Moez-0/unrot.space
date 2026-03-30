@@ -3,13 +3,18 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase, SupabaseSession } from '../lib/supabase';
 import { formatTime, cn } from '../lib/utils';
 import { motion } from 'motion/react';
-import { Trophy, Award, Zap, ArrowRight, Home, Play } from 'lucide-react';
+import { Trophy, Award, Zap, ArrowRight, Home, Play, Sparkles, Loader2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { useSession } from '../context/SessionContext';
+import { generateSessionSummary } from '../services/aiService';
 
 export function ResultsPage() {
   const { id } = useParams<{ id: string }>();
+  const { isPro } = useSession();
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     async function fetchSession() {
@@ -23,6 +28,13 @@ export function ResultsPage() {
 
         if (data && !error) {
           setSession(data);
+          // If summary already exists in DB, show it to everyone
+          if (data.ai_summary) {
+            setAiSummary(data.ai_summary);
+          } else if (data.chain && data.chain.length > 0) {
+            // Auto-generate summary if session is found and no summary exists
+            handleGenerateSummary(data.chain, data.id);
+          }
         }
       } catch (err) {
         console.error('Error fetching session:', err);
@@ -32,7 +44,19 @@ export function ResultsPage() {
     }
 
     fetchSession();
-  }, [id]);
+  }, [id, isPro]);
+
+  const handleGenerateSummary = async (chain: string[], sessionId: string) => {
+    setIsGenerating(true);
+    try {
+      const summary = await generateSessionSummary(chain, sessionId);
+      setAiSummary(summary || null);
+    } catch (err) {
+      console.error('Failed to generate AI summary:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -139,6 +163,39 @@ export function ResultsPage() {
               <div className="text-3xl font-display uppercase">{session.focus_score}</div>
             </div>
           </div>
+
+          {/* AI Focus Analysis (Cached or Generated) */}
+          {(aiSummary || session?.chain) && (
+            <div className="neo-card bg-accent/5 p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Sparkles size={120} className="text-accent" />
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-accent text-bg p-2 neo-border-sm">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-display uppercase">AI Focus Analysis</h2>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-accent">Deep Insight Engine</p>
+                  </div>
+                </div>
+                
+                {isGenerating ? (
+                  <div className="flex items-center gap-3 py-4">
+                    <Loader2 className="animate-spin text-accent" size={20} />
+                    <p className="text-xs font-bold uppercase tracking-widest opacity-40">Synthesizing your journey...</p>
+                  </div>
+                ) : aiSummary ? (
+                  <p className="text-lg font-bold leading-relaxed text-ink/80 italic">
+                    "{aiSummary}"
+                  </p>
+                ) : (
+                  <p className="text-xs font-bold uppercase tracking-widest opacity-40">Analysis unavailable.</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* The Path */}
           <div className="neo-card bg-ink text-bg p-8">

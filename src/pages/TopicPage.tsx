@@ -7,22 +7,23 @@ import { ChainTracker } from '../components/TopicComponents';
 import { formatTime, cn, getYouTubeId } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2, Trophy, Wind, Music, Coffee, Headphones, Volume2, VolumeX } from 'lucide-react';
-import { StartSessionModal } from '../components/StartSessionModal';
+import { Clock, LogOut, Zap, ChevronRight, ArrowRight, Play, Image as ImageIcon, Loader2, Trophy, Wind, Music, Coffee, Headphones, Volume2, VolumeX, Sparkles } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { generateTopicInsights } from '../services/aiService';
 
 export function TopicPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, setUserName, userName, isPro, focusMode, setFocusMode } = useSession();
+  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, user, isPro, focusMode, setFocusMode } = useSession();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [relatedTopics, setRelatedTopics] = useState<Topic[]>([]);
   const [furtherReading, setFurtherReading] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const focusModes = [
@@ -62,11 +63,25 @@ export function TopicPage() {
           .single();
 
         if (data && !error) {
+          // Check if topic is Pro and user is not Pro
+          if (data.is_pro && !isPro) {
+            navigate('/pricing');
+            return;
+          }
+
           const mainTopic = {
             ...data,
             related: data.related_ids || []
           };
           setTopic(mainTopic);
+
+          // If insights already exist in DB, show them to everyone
+          if (data.ai_insights) {
+            setAiInsights(data.ai_insights);
+          } else {
+            // Auto-generate insights if topic is found and no insights exist
+            handleGenerateInsights(mainTopic.title, mainTopic.content, mainTopic.id);
+          }
 
           // Fetch related topics info
           if (mainTopic.related.length > 0) {
@@ -99,34 +114,40 @@ export function TopicPage() {
     }
 
     fetchTopic();
-  }, [id, chain]);
+  }, [id, chain, isPro]);
+
+  const handleGenerateInsights = async (title: string, content: string, topicId: string) => {
+    setIsGeneratingInsights(true);
+    try {
+      const insights = await generateTopicInsights(title, content, topicId);
+      setAiInsights(insights);
+    } catch (err) {
+      console.error('Failed to generate AI insights:', err);
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
 
   useEffect(() => {
     if (!topic && !id && !loading && !isActive) {
-      if (userName) {
+      if (user) {
         startSession();
       } else {
-        setIsModalOpen(true);
+        navigate('/auth');
       }
       return;
     }
     
     if (topic && !isActive) {
-      if (userName) {
+      if (user) {
         startSession(topic.id);
       } else {
-        setIsModalOpen(true);
+        navigate('/auth');
       }
     } else if (topic && id && isActive) {
       addToChain(topic.id);
     }
-  }, [topic, id, isActive, loading, userName]);
-
-  const handleConfirmName = async (name: string) => {
-    setUserName(name);
-    await startSession(topic?.id);
-    setIsModalOpen(false);
-  };
+  }, [topic, id, isActive, loading, user]);
 
   if (loading) {
     return (
@@ -136,7 +157,7 @@ export function TopicPage() {
     );
   }
 
-  if (!topic && !isActive && !isModalOpen) return null;
+  if (!topic && !isActive) return null;
 
   const handleEndSession = () => {
     endSession();
@@ -180,14 +201,6 @@ export function TopicPage() {
         <meta property="twitter:image" content={topic?.image_url || 'https://unrot.space/og-image.png'} />
         <link rel="canonical" href={`https://unrot.space/topic/${topic?.id}`} />
       </Helmet>
-      <StartSessionModal 
-        isOpen={isModalOpen} 
-        onClose={() => {
-          setIsModalOpen(false);
-          if (!isActive) navigate('/');
-        }} 
-        onConfirm={handleConfirmName} 
-      />
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -341,6 +354,38 @@ export function TopicPage() {
                       {/* Sidebar / Key Insights */}
                       <div className="lg:col-span-4 space-y-12">
                         <div className="neo-card bg-secondary/10 p-8 sticky top-32 space-y-12">
+                          {/* AI Deep Insights (Pro Feature or Cached) */}
+                          {(isPro || aiInsights.length > 0) && (
+                            <div className="bg-accent/5 p-6 neo-border-sm relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-2 opacity-10">
+                                <Sparkles size={60} className="text-accent" />
+                              </div>
+                              <div className="relative z-10">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <Sparkles size={16} className="text-accent" />
+                                  <h3 className="font-display uppercase text-sm">AI Deep Insights</h3>
+                                </div>
+                                
+                                {isGeneratingInsights ? (
+                                  <div className="flex items-center gap-2 py-2">
+                                    <Loader2 className="animate-spin text-accent" size={14} />
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Thinking...</p>
+                                  </div>
+                                ) : aiInsights.length > 0 ? (
+                                  <ul className="space-y-4">
+                                    {aiInsights.map((insight, i) => (
+                                      <li key={i} className="text-[10px] font-bold leading-relaxed border-l-2 border-accent pl-3 italic">
+                                        {insight}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Insights unavailable.</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           <div>
                             <h3 className="font-display uppercase text-xl mb-6 flex items-center gap-2">
                               <Zap size={20} className="text-accent" />

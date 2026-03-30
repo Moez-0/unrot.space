@@ -20,6 +20,7 @@ export interface SupabaseTopic {
   related_ids: string[];
   created_at: string;
   is_pro: boolean;
+  ai_insights?: string[];
 }
 
 export interface SupabaseSession {
@@ -31,6 +32,7 @@ export interface SupabaseSession {
   focus_score: number;
   chain: string[];
   created_at: string;
+  ai_summary?: string;
 }
 
 export interface Profile {

@@ -5,22 +5,18 @@ import { ArrowRight, Zap, Eye, Brain, Play } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useSession } from '../context/SessionContext';
 import { useState } from 'react';
-import { StartSessionModal } from '../components/StartSessionModal';
 
 export function LandingPage() {
-  const { startSession, setUserName } = useSession();
+  const { startSession, user } = useSession();
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleStartSession = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleConfirm = (name: string) => {
-    setUserName(name);
-    startSession();
-    setIsModalOpen(false);
-    navigate('/session');
+    if (user) {
+      startSession();
+      navigate('/session');
+    } else {
+      navigate('/auth');
+    }
   };
 
   return (
@@ -30,11 +26,6 @@ export function LandingPage() {
         <meta name="description" content="An anti-brain-rot platform for deep, focused thinking and curated knowledge exploration. Reclaim your attention through curated rabbit holes." />
         <link rel="canonical" href="https://unrot.space" />
       </Helmet>
-      <StartSessionModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onConfirm={handleConfirm} 
-      />
       <div className="pt-24">
         {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 mb-24">

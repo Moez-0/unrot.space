@@ -7,15 +7,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { Loader2, Search, X, Filter, Zap } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
-import { StartSessionModal } from '../components/StartSessionModal';
 import { cn } from '../lib/utils';
 
 export function ExplorePage() {
   const [topics, setTopics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isActive, startSession, setUserName, userName, isPro, sessionLimitReached } = useSession();
+  const { isActive, startSession, user, isPro, sessionLimitReached } = useSession();
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
@@ -50,13 +48,13 @@ export function ExplorePage() {
     }
 
     if (sessionLimitReached) {
-      setError('Daily session limit reached. Upgrade to Pro for unlimited thinking.');
+      setError('Daily session limit reached. Upgrade to Pro for unlimited sessions.');
       return;
     }
 
     if (isActive) {
       navigate(`/topic/${topic.id}`);
-    } else if (userName) {
+    } else if (user) {
       try {
         await startSession(topic.id);
         navigate(`/topic/${topic.id}`);
@@ -64,20 +62,7 @@ export function ExplorePage() {
         setError(err.message);
       }
     } else {
-      setSelectedTopicId(topic.id);
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleConfirmName = async (name: string) => {
-    setUserName(name);
-    try {
-      await startSession(selectedTopicId || undefined);
-      setIsModalOpen(false);
-      navigate(`/topic/${selectedTopicId || 'philosophy-of-time'}`);
-    } catch (err: any) {
-      setError(err.message);
-      setIsModalOpen(false);
+      navigate('/auth');
     }
   };
 
@@ -110,11 +95,6 @@ export function ExplorePage() {
         <meta name="description" content="Browse our curated collection of knowledge rabbit holes. Choose your entry point and start your journey into deep, focused thinking." />
         <link rel="canonical" href="https://unrot.space/explore" />
       </Helmet>
-      <StartSessionModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onConfirm={handleConfirmName} 
-      />
 
       <AnimatePresence>
         {error && (
