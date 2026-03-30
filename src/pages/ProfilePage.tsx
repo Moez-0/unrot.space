@@ -172,7 +172,7 @@ export function ProfilePage() {
                         </button>
                       </div>
                       
-                      {isPro && (
+                      {isPro ? (
                         <div className="pt-4 border-t border-ink/10">
                           <label className="block text-[10px] uppercase font-black mb-2 opacity-40 text-accent">Subscription Management</label>
                           <a 
@@ -187,6 +187,25 @@ export function ProfilePage() {
                           <p className="mt-2 text-[10px] font-bold opacity-40 uppercase tracking-widest">
                             Note: Cancellations take effect at the end of your current billing cycle.
                           </p>
+                        </div>
+                      ) : (
+                        <div className="pt-4 border-t border-ink/10 flex flex-col sm:flex-row gap-4">
+                          <Link 
+                            to="/pricing" 
+                            className="neo-button bg-accent text-bg py-3 px-6 text-xs font-display uppercase flex items-center justify-center gap-2 w-full sm:w-auto"
+                          >
+                            <Zap size={14} />
+                            Upgrade to Pro
+                          </Link>
+                          <button 
+                            type="button"
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className="neo-button bg-bg text-ink py-3 px-6 text-xs font-display uppercase flex items-center justify-center gap-2 w-full sm:w-auto"
+                          >
+                            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+                            Refresh Status
+                          </button>
                         </div>
                       )}
                     </div>
