@@ -22,8 +22,8 @@ export function LandingPage() {
   return (
     <>
       <Helmet>
-        <title>unrot | Escape the Scroll, Reclaim Your Focus</title>
-        <meta name="description" content="An anti-brain-rot platform for deep, focused thinking and curated knowledge exploration. Reclaim your attention through curated rabbit holes." />
+        <title>unrot | Cure Brainrot & Reclaim Your Attention</title>
+        <meta name="description" content="Tired of endless doomscrolling? Unrot your brain. An anti-brainrot platform designed to cure digital fatigue, restore deep focus, and help you reclaim your attention span." />
         <link rel="canonical" href="https://unrot.space" />
       </Helmet>
       <div className="pt-24">
@@ -37,15 +37,15 @@ export function LandingPage() {
             className="max-w-3xl"
           >
             <div className="inline-block bg-accent text-bg px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-6">
-              Attention Deficit Antidote
+              The Ultimate Brainrot Cure
             </div>
             <h1 className="text-6xl md:text-9xl leading-[0.8] font-display mb-8 uppercase">
-              ESCAPE THE <br />
-              <span className="text-primary bg-ink px-4 py-2 inline-block -rotate-2">SCROLL.</span>
+              UNROT YOUR <br />
+              <span className="text-primary bg-ink px-4 py-2 inline-block -rotate-2">BRAIN.</span>
             </h1>
             <p className="text-lg md:text-2xl text-ink font-bold mb-6 leading-snug mx-auto max-w-2xl">
-              Mindless consumption is rotting your brain. 
-              Go deeper, not wider. Reclaim your focus through curated rabbit holes.
+              Endless doomscrolling is destroying your attention span. 
+              Cure your digital fatigue and reclaim your focus through curated rabbit holes.
             </p>
             
             <p className="text-xs uppercase tracking-[0.2em] font-black text-accent mb-10 opacity-80">
@@ -77,7 +77,7 @@ export function LandingPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
           
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-5xl font-display mb-12">How to unrot.</h2>
+            <h2 className="text-4xl md:text-5xl font-display mb-12">How to cure brainrot.</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
@@ -126,11 +126,11 @@ export function LandingPage() {
           <div className="space-y-8">
             <h2 className="text-5xl md:text-7xl font-display uppercase leading-none">
               THE <span className="text-accent">COST</span> OF <br />
-              <span className="text-primary">DISTRACTION.</span>
+              <span className="text-primary">BRAINROT.</span>
             </h2>
             <p className="text-lg font-bold leading-snug opacity-80">
-              The modern attention economy is designed to keep you in a state of perpetual shallow engagement. 
-              We're losing the ability to engage with complex ideas.
+              The modern attention economy is designed to keep you doomscrolling in a state of perpetual shallow engagement. 
+              We're rapidly losing the ability to engage with complex ideas.
             </p>
             <div className="space-y-4">
               {[
@@ -174,7 +174,7 @@ export function LandingPage() {
               <span className="bg-ink text-bg px-4 py-2 inline-block rotate-1">RECLAIM?</span>
             </h2>
             <p className="text-xl font-bold mb-12 max-w-2xl mx-auto">
-              Join thousands of thinkers who are choosing depth over distraction. 
+              Join thousands of thinkers who are choosing depth over doomscrolling. 
               Your first rabbit hole is waiting.
             </p>
             <button
