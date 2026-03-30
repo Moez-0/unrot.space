@@ -23,19 +23,13 @@ export function ExplorePage() {
     const token = searchParams.get('customer_session_token');
 
     if (isSuccess) {
-      if (token && user) {
-        fetch('/api/verify-checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer_session_token: token, user_id: user.id })
-        }).finally(() => {
-          navigate('/success', { replace: true });
-        });
-      } else if (!token || (!user && !loading)) {
+      if (token) {
+        navigate(`/success?customer_session_token=${token}`, { replace: true });
+      } else {
         navigate('/success', { replace: true });
       }
     }
-  }, [searchParams, navigate, user, loading]);
+  }, [searchParams, navigate]);
   
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');

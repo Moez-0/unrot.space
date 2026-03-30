@@ -12,16 +12,41 @@ export function SuccessPage() {
 
   useEffect(() => {
     const token = searchParams.get('customer_session_token');
+    
     if (token && user) {
-      fetch('/api/verify-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer_session_token: token, user_id: user.id })
-      }).finally(() => {
-        searchParams.delete('customer_session_token');
-        setSearchParams(searchParams, { replace: true });
-        fetchProfile();
-      });
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      const verifyCheckout = async () => {
+        try {
+          const res = await fetch('/api/verify-checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_session_token: token, user_id: user.id })
+          });
+          const data = await res.json();
+          
+          if (data.upgraded) {
+            searchParams.delete('customer_session_token');
+            setSearchParams(searchParams, { replace: true });
+            fetchProfile();
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(verifyCheckout, 2000); // Retry after 2 seconds
+          } else {
+            // Stop polling after 5 attempts
+            searchParams.delete('customer_session_token');
+            setSearchParams(searchParams, { replace: true });
+          }
+        } catch (err) {
+          console.error(err);
+          // If network error, stop immediately or retry. We stop here.
+          searchParams.delete('customer_session_token');
+          setSearchParams(searchParams, { replace: true });
+        }
+      };
+
+      verifyCheckout();
     }
   }, [searchParams, user, setSearchParams, fetchProfile]);
 
