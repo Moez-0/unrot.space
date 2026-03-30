@@ -41,4 +41,6 @@ export interface Profile {
   total_score: number;
   subscription_tier: 'free' | 'pro';
   created_at: string;
+  polar_customer_id?: string | null;
+  polar_subscription_id?: string | null;
 }

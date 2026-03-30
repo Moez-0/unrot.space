@@ -29,12 +29,21 @@ async function startServer() {
       // Handle subscription created or updated
       if (event.type === "subscription.created" || event.type === "subscription.updated") {
         const subscription = event.data;
-        const userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
+        let userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
+
+        if (!userId) {
+           const { data } = await supabase.from('profiles').select('id').eq('polar_subscription_id', subscription.id).single();
+           if (data) userId = data.id;
+        }
 
         if (userId) {
           const { error } = await supabase
             .from("profiles")
-            .update({ subscription_tier: "pro" })
+            .update({ 
+              subscription_tier: "pro",
+              polar_customer_id: subscription.customer_id,
+              polar_subscription_id: subscription.id
+            })
             .eq("id", userId);
 
           if (error) throw error;
@@ -45,12 +54,20 @@ async function startServer() {
       // Handle subscription deleted or canceled
       if (event.type === "subscription.deleted" || event.type === "subscription.revoked") {
         const subscription = event.data;
-        const userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
+        let userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
+
+        if (!userId) {
+           const { data } = await supabase.from('profiles').select('id').eq('polar_subscription_id', subscription.id).single();
+           if (data) userId = data.id;
+        }
 
         if (userId) {
           const { error } = await supabase
             .from("profiles")
-            .update({ subscription_tier: "free" })
+            .update({ 
+              subscription_tier: "free",
+              polar_subscription_id: null
+            })
             .eq("id", userId);
 
           if (error) throw error;
@@ -61,6 +78,50 @@ async function startServer() {
       res.status(200).json({ received: true });
     } catch (err) {
       console.error("Webhook error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Checkout Verification Endpoint (for client-side fallback)
+  app.post("/api/verify-checkout", express.json(), async (req, res) => {
+    try {
+      const { customer_session_token, user_id } = req.body;
+      if (!customer_session_token || !user_id) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const polarRes = await fetch("https://api.polar.sh/v1/customer-portal/subscriptions", {
+        headers: {
+          "Authorization": `Bearer ${customer_session_token}`
+        }
+      });
+
+      if (!polarRes.ok) {
+        return res.status(401).json({ error: "Invalid customer session token" });
+      }
+
+      const polarData = await polarRes.json();
+      const hasActiveSub = polarData.items?.some((sub: any) => sub.status === "active");
+
+      if (hasActiveSub) {
+        const activeSub = polarData.items.find((sub: any) => sub.status === "active");
+        
+        const { error } = await supabase
+          .from("profiles")
+          .update({ 
+            subscription_tier: "pro",
+            polar_customer_id: activeSub.customer_id,
+            polar_subscription_id: activeSub.id
+          })
+          .eq("id", user_id);
+
+        if (error) throw error;
+        return res.status(200).json({ success: true, upgraded: true });
+      }
+
+      return res.status(200).json({ success: true, upgraded: false });
+    } catch (err) {
+      console.error("Verify checkout error:", err);
       res.status(500).json({ error: "Internal server error" });
     }
   });

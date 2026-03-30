@@ -33,19 +33,28 @@ export const handler: Handler = async (event) => {
     
     if (successEvents.includes(body.type)) {
       // Try every possible metadata path
-      const userId = 
+      let userId = 
         data.metadata?.user_id || 
         data.metadata?.reference_id ||
         data.customer_metadata?.user_id || 
         data.custom_field_data?.user_id ||
         (data.metadata && typeof data.metadata === 'string' ? JSON.parse(data.metadata).user_id : null);
 
+      if (!userId) {
+         const { data: dbData } = await supabase.from('profiles').select('id').eq('polar_subscription_id', data.id).single();
+         if (dbData) userId = dbData.id;
+      }
+
       console.log("Extracted User ID:", userId);
 
       if (userId) {
         const { error } = await supabase
           .from("profiles")
-          .update({ subscription_tier: "pro" })
+          .update({ 
+            subscription_tier: "pro",
+            polar_customer_id: data.customer_id,
+            polar_subscription_id: data.id
+          })
           .eq("id", userId);
 
         if (error) {
@@ -63,12 +72,20 @@ export const handler: Handler = async (event) => {
     // Handle subscription deleted or canceled
     if (body.type === "subscription.deleted" || body.type === "subscription.revoked") {
       const subscription = body.data;
-      const userId = subscription.metadata?.user_id;
+      let userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
+
+      if (!userId) {
+         const { data: dbData } = await supabase.from('profiles').select('id').eq('polar_subscription_id', subscription.id).single();
+         if (dbData) userId = dbData.id;
+      }
 
       if (userId) {
         const { error } = await supabase
           .from("profiles")
-          .update({ subscription_tier: "free" })
+          .update({ 
+            subscription_tier: "free",
+            polar_subscription_id: null
+          })
           .eq("id", userId);
 
         if (error) throw error;

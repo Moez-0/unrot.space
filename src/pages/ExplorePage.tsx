@@ -19,10 +19,23 @@ export function ExplorePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (searchParams.get('success') === 'true') {
-      navigate('/success', { replace: true });
+    const isSuccess = searchParams.get('success') === 'true';
+    const token = searchParams.get('customer_session_token');
+
+    if (isSuccess) {
+      if (token && user) {
+        fetch('/api/verify-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customer_session_token: token, user_id: user.id })
+        }).finally(() => {
+          navigate('/success', { replace: true });
+        });
+      } else if (!token || (!user && !loading)) {
+        navigate('/success', { replace: true });
+      }
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, user, loading]);
   
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');

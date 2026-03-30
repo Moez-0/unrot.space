@@ -9,6 +9,11 @@
   to = "/.netlify/functions/polar-webhook"
   status = 200
 
+[[redirects]]
+  from = "/api/verify-checkout"
+  to = "/.netlify/functions/verify-checkout"
+  status = 200
+
 # Catch-all for React Router
 [[redirects]]
   from = "/*"
