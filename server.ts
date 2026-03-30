@@ -29,7 +29,7 @@ async function startServer() {
       // Handle subscription created or updated
       if (event.type === "subscription.created" || event.type === "subscription.updated") {
         const subscription = event.data;
-        const userId = subscription.metadata?.user_id; // We'll pass this in the checkout URL
+        const userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
 
         if (userId) {
           const { error } = await supabase
@@ -45,7 +45,7 @@ async function startServer() {
       // Handle subscription deleted or canceled
       if (event.type === "subscription.deleted" || event.type === "subscription.revoked") {
         const subscription = event.data;
-        const userId = subscription.metadata?.user_id;
+        const userId = subscription.metadata?.user_id || subscription.metadata?.reference_id || subscription.custom_field_data?.user_id;
 
         if (userId) {
           const { error } = await supabase

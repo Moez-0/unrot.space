@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Topic } from '../data/topics';
 import { TopicCard } from '../components/TopicComponents';
@@ -14,8 +14,15 @@ export function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const { isActive, startSession, user, isPro, sessionLimitReached } = useSession();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      navigate('/success', { replace: true });
+    }
+  }, [searchParams, navigate]);
   
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');

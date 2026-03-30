@@ -35,7 +35,9 @@ export const handler: Handler = async (event) => {
       // Try every possible metadata path
       const userId = 
         data.metadata?.user_id || 
+        data.metadata?.reference_id ||
         data.customer_metadata?.user_id || 
+        data.custom_field_data?.user_id ||
         (data.metadata && typeof data.metadata === 'string' ? JSON.parse(data.metadata).user_id : null);
 
       console.log("Extracted User ID:", userId);

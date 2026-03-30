@@ -100,7 +100,7 @@ export function PricingPage() {
               {plan.polarUrl && !plan.isCurrent ? (
                 user ? (
                   <a
-                    href={`${plan.polarUrl}?customer_email=${user?.email || ''}&metadata=${encodeURIComponent(JSON.stringify({ user_id: user?.id }))}&success_url=${encodeURIComponent(`${window.location.origin}/success`)}`}
+                    href={`${plan.polarUrl}?customer_email=${user?.email || ''}&reference_id=${user?.id}&success_url=${encodeURIComponent(`${window.location.origin}/success`)}`}
                     className={`neo-button py-4 font-display uppercase text-xl flex items-center justify-center gap-3 ${plan.buttonClass}`}
                   >
                     {plan.buttonText}
