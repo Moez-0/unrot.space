@@ -1,8 +1,8 @@
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 import { supabase } from '../lib/supabase';
 
-// Using the requested free model from OpenRouter
-const DEFAULT_MODEL = "/arcee-ai/trinity-large-preview:free";
+// Using a reliable free model from OpenRouter
+const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
 
 async function callOpenRouter(prompt: string, isJson: boolean = false) {
   if (!OPENROUTER_API_KEY) {
@@ -21,6 +21,7 @@ async function callOpenRouter(prompt: string, isJson: boolean = false) {
       },
       body: JSON.stringify({
         "model": DEFAULT_MODEL,
+        ...(isJson ? { "response_format": { "type": "json_object" } } : {}),
         "messages": [
           {
             "role": "user",
