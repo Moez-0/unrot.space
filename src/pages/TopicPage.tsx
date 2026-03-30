@@ -75,11 +75,11 @@ export function TopicPage() {
           };
           setTopic(mainTopic);
 
-          // If insights already exist in DB, show them to everyone
-          if (data.ai_insights) {
+          // If insights already exist in DB, show them to Pro users
+          if (data.ai_insights && isPro) {
             setAiInsights(data.ai_insights);
-          } else {
-            // Auto-generate insights if topic is found and no insights exist
+          } else if (isPro) {
+            // Auto-generate insights for Pro users if none exist
             handleGenerateInsights(mainTopic.title, mainTopic.content, mainTopic.id);
           }
 
@@ -354,37 +354,47 @@ export function TopicPage() {
                       {/* Sidebar / Key Insights */}
                       <div className="lg:col-span-4 space-y-12">
                         <div className="neo-card bg-secondary/10 p-8 sticky top-32 space-y-12">
-                          {/* AI Deep Insights (Pro Feature or Cached) */}
-                          {(isPro || aiInsights.length > 0) && (
-                            <div className="bg-accent/5 p-6 neo-border-sm relative overflow-hidden">
-                              <div className="absolute top-0 right-0 p-2 opacity-10">
-                                <Sparkles size={60} className="text-accent" />
-                              </div>
-                              <div className="relative z-10">
-                                <div className="flex items-center gap-2 mb-4">
-                                  <Sparkles size={16} className="text-accent" />
-                                  <h3 className="font-display uppercase text-sm">AI Deep Insights</h3>
-                                </div>
-                                
-                                {isGeneratingInsights ? (
-                                  <div className="flex items-center gap-2 py-2">
-                                    <Loader2 className="animate-spin text-accent" size={14} />
-                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Thinking...</p>
-                                  </div>
-                                ) : aiInsights.length > 0 ? (
-                                  <ul className="space-y-4">
-                                    {aiInsights.map((insight, i) => (
-                                      <li key={i} className="text-[10px] font-bold leading-relaxed border-l-2 border-accent pl-3 italic">
-                                        {insight}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Insights unavailable.</p>
-                                )}
-                              </div>
+                          {/* AI Deep Insights (Pro Feature) */}
+                          <div className="bg-accent/5 p-6 neo-border-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-2 opacity-10">
+                              <Sparkles size={60} className="text-accent" />
                             </div>
-                          )}
+                            <div className="relative z-10">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Sparkles size={16} className="text-accent" />
+                                <h3 className="font-display uppercase text-sm">AI Deep Insights</h3>
+                              </div>
+                              
+                              {!isPro ? (
+                                <div className="space-y-4">
+                                  <p className="text-[10px] font-bold leading-relaxed opacity-60 uppercase tracking-widest">
+                                    Unlock deep AI-powered analysis of this topic.
+                                  </p>
+                                  <Link 
+                                    to="/pricing"
+                                    className="neo-button bg-accent text-bg px-4 py-2 text-[8px] font-black uppercase tracking-widest inline-block"
+                                  >
+                                    Upgrade to Pro
+                                  </Link>
+                                </div>
+                              ) : isGeneratingInsights ? (
+                                <div className="flex items-center gap-2 py-2">
+                                  <Loader2 className="animate-spin text-accent" size={14} />
+                                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Thinking...</p>
+                                </div>
+                              ) : aiInsights.length > 0 ? (
+                                <ul className="space-y-4">
+                                  {aiInsights.map((insight, i) => (
+                                    <li key={i} className="text-[10px] font-bold leading-relaxed border-l-2 border-accent pl-3 italic">
+                                      {insight}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Insights unavailable.</p>
+                              )}
+                            </div>
+                          </div>
 
                           <div>
                             <h3 className="font-display uppercase text-xl mb-6 flex items-center gap-2">

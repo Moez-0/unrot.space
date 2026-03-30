@@ -68,7 +68,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isPro = profile?.subscription_tier === 'pro';
-  const sessionLimitReached = !isPro && sessionCount >= 1000;
+  const sessionLimitReached = !isPro && sessionCount >= 10;
 
   useEffect(() => {
     // Get initial session

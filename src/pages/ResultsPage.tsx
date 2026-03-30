@@ -28,11 +28,11 @@ export function ResultsPage() {
 
         if (data && !error) {
           setSession(data);
-          // If summary already exists in DB, show it to everyone
-          if (data.ai_summary) {
+          // If summary already exists in DB, show it to Pro users
+          if (data.ai_summary && isPro) {
             setAiSummary(data.ai_summary);
-          } else if (data.chain && data.chain.length > 0) {
-            // Auto-generate summary if session is found and no summary exists
+          } else if (data.chain && data.chain.length > 0 && isPro) {
+            // Auto-generate summary for Pro users if none exists
             handleGenerateSummary(data.chain, data.id);
           }
         }
@@ -164,38 +164,48 @@ export function ResultsPage() {
             </div>
           </div>
 
-          {/* AI Focus Analysis (Cached or Generated) */}
-          {(aiSummary || session?.chain) && (
-            <div className="neo-card bg-accent/5 p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Sparkles size={120} className="text-accent" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-accent text-bg p-2 neo-border-sm">
-                    <Sparkles size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-display uppercase">AI Focus Analysis</h2>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-accent">Deep Insight Engine</p>
-                  </div>
-                </div>
-                
-                {isGenerating ? (
-                  <div className="flex items-center gap-3 py-4">
-                    <Loader2 className="animate-spin text-accent" size={20} />
-                    <p className="text-xs font-bold uppercase tracking-widest opacity-40">Synthesizing your journey...</p>
-                  </div>
-                ) : aiSummary ? (
-                  <p className="text-lg font-bold leading-relaxed text-ink/80 italic">
-                    "{aiSummary}"
-                  </p>
-                ) : (
-                  <p className="text-xs font-bold uppercase tracking-widest opacity-40">Analysis unavailable.</p>
-                )}
-              </div>
+          {/* AI Focus Analysis (Pro Feature) */}
+          <div className="neo-card bg-accent/5 p-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Sparkles size={120} className="text-accent" />
             </div>
-          )}
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-accent text-bg p-2 neo-border-sm">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-display uppercase">AI Focus Analysis</h2>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-accent">Deep Insight Engine</p>
+                </div>
+              </div>
+              
+              {!isPro ? (
+                <div className="space-y-6">
+                  <p className="text-lg font-bold opacity-60 uppercase tracking-widest leading-relaxed italic">
+                    "Unlock deep AI-powered analysis of your focus journey. Synthesize your knowledge path into a cohesive narrative."
+                  </p>
+                  <Link 
+                    to="/pricing"
+                    className="neo-button bg-accent text-bg px-8 py-3 font-display uppercase text-lg inline-block"
+                  >
+                    Upgrade to Pro
+                  </Link>
+                </div>
+              ) : isGenerating ? (
+                <div className="flex items-center gap-3 py-4">
+                  <Loader2 className="animate-spin text-accent" size={20} />
+                  <p className="text-xs font-bold uppercase tracking-widest opacity-40">Synthesizing your journey...</p>
+                </div>
+              ) : aiSummary ? (
+                <p className="text-lg font-bold leading-relaxed text-ink/80 italic">
+                  "{aiSummary}"
+                </p>
+              ) : (
+                <p className="text-xs font-bold uppercase tracking-widest opacity-40">Analysis unavailable.</p>
+              )}
+            </div>
+          </div>
 
           {/* The Path */}
           <div className="neo-card bg-ink text-bg p-8">
