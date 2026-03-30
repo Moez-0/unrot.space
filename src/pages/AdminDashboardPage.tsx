@@ -21,6 +21,7 @@ export function AdminDashboardPage() {
   const [editingTopic, setEditingTopic] = useState<Partial<SupabaseTopic> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetchingWiki, setIsFetchingWiki] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
@@ -92,6 +93,29 @@ export function AdminDashboardPage() {
       alert('Error saving topic. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleWikipediaAutofill = async () => {
+    if (!editingTopic?.title) return;
+    setIsFetchingWiki(true);
+    try {
+      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(editingTopic.title)}`);
+      if (!res.ok) throw new Error('Topic not found on Wikipedia');
+      
+      const data = await res.json();
+      
+      setEditingTopic(prev => ({
+        ...prev!,
+        description: data.description || (data.extract ? data.extract.split('.')[0] + '.' : prev?.description || ''),
+        content: data.extract || prev?.content || '',
+        image_url: data.originalimage?.source || data.thumbnail?.source || prev?.image_url || ''
+      }));
+      
+    } catch (err) {
+      alert('Failed to fetch from Wikipedia. Please verify the exact spelling of the topic title.');
+    } finally {
+      setIsFetchingWiki(false);
     }
   };
 
@@ -530,7 +554,18 @@ export function AdminDashboardPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Title</label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Title</label>
+                      <button 
+                        type="button"
+                        onClick={handleWikipediaAutofill}
+                        disabled={isFetchingWiki || !editingTopic?.title}
+                        className="text-[10px] font-black uppercase tracking-widest text-secondary hover:text-accent transition-colors flex items-center gap-1 disabled:opacity-40"
+                      >
+                        {isFetchingWiki ? <Loader2 size={12} className="animate-spin" /> : <BookOpen size={12} />}
+                        Auto-fill from Wikipedia
+                      </button>
+                    </div>
                     <input 
                       type="text"
                       required
