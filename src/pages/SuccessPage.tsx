@@ -19,7 +19,8 @@ export function SuccessPage() {
       
       const verifyCheckout = async () => {
         try {
-          const res = await fetch('/api/verify-checkout', {
+          const endpoint = import.meta.env.PROD ? '/.netlify/functions/verify-checkout' : '/api/verify-checkout';
+          const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ customer_session_token: token, user_id: user.id })
