@@ -1,15 +1,29 @@
 import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Zap, CheckCircle, ArrowRight, Trophy, Sparkles } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { useSession } from '../context/SessionContext';
 
 export function SuccessPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, fetchProfile } = useSession();
 
   useEffect(() => {
-    // Optional: Trigger confetti or something here
-  }, []);
+    const token = searchParams.get('customer_session_token');
+    if (token && user) {
+      fetch('/api/verify-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_session_token: token, user_id: user.id })
+      }).finally(() => {
+        searchParams.delete('customer_session_token');
+        setSearchParams(searchParams, { replace: true });
+        fetchProfile();
+      });
+    }
+  }, [searchParams, user, setSearchParams, fetchProfile]);
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center p-6 pt-32 pb-20">
