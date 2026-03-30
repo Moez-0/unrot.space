@@ -125,3 +125,47 @@ export async function generateTopicInsights(topicTitle: string, content: string,
     return [];
   }
 }
+
+export async function generateMagicTopic(title: string, wikiSummary: string, existingTopics: {id: string, title: string}[]) {
+  const topicsList = existingTopics.map(t => `${t.id} (${t.title})`).join(", ");
+
+  const prompt = `
+    You are an expert curriculum designer for an "anti-brain-rot" deep-learning platform.
+    Write an incredibly engaging, deeply fascinating, and extensive Markdown article about "${title}".
+    
+    Here is a factual baseline summary from Wikipedia to anchor your knowledge:
+    "${wikiSummary}"
+
+    Requirements for the Markdown:
+    - Must be long (at least 6-8 paragraphs).
+    - Make it profoundly interesting, connecting it to philosophy, science, or mind-blowing facts.
+    - If there are relevant mathematical or chemical formulas, include them using LaTeX format wrapped in $$ (e.g., $$ E = mc^2 $$).
+    - Include real-world examples.
+    - Do NOT include a main title # heading, just start with the body text.
+
+    Requirements for metadata:
+    - Generate a clean, URL-safe 'slug' for this topic (e.g. quantum-mechanics).
+    - Generate a powerful, one-sentence 'hook' description.
+    - Select 1 to 3 relevant 'related_ids' explicitly chosen from this list of existing topics: [${topicsList}]. If none are highly relevant, return an empty array.
+    - Select a 'category' from: Science, Math, Philosophy, Technology, History, Art.
+    - If you know a spectacularly good, highly-relevant educational YouTube video explaining this, provide its URL (e.g., a Kurzgesagt, Veritasium, or closely related video URL). Otherwise leave null.
+
+    Output pure JSON matching this exact structure:
+    {
+      "id": "string",
+      "description": "string",
+      "content": "string",
+      "category": "string",
+      "related_ids": ["string"],
+      "video_url": "string | null"
+    }
+  `;
+
+  const result = await callOpenRouter(prompt, true);
+  try {
+    return JSON.parse(result || '{}');
+  } catch (e) {
+    console.error('Failed to parse AI generated topic:', e);
+    return null;
+  }
+}

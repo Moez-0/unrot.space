@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, SupabaseTopic, SupabaseSession } from '../lib/supabase';
+import { generateMagicTopic } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -100,20 +101,38 @@ export function AdminDashboardPage() {
     if (!editingTopic?.title) return;
     setIsFetchingWiki(true);
     try {
+      // 1. Fetch from Wikipedia for reliable imagery and baseline facts
       const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(editingTopic.title)}`);
-      if (!res.ok) throw new Error('Topic not found on Wikipedia');
+      let wikiSummary = '';
+      let imageUrl = editingTopic.image_url || '';
       
-      const data = await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        wikiSummary = data.extract || '';
+        imageUrl = data.originalimage?.source || data.thumbnail?.source || imageUrl;
+      }
+
+      // 2. Ask AI to perform Magic Generation
+      const simpleTopicsStore = topics.map(t => ({ id: t.id, title: t.title }));
+      const aiData = await generateMagicTopic(editingTopic.title, wikiSummary, simpleTopicsStore);
       
-      setEditingTopic(prev => ({
-        ...prev!,
-        description: data.description || (data.extract ? data.extract.split('.')[0] + '.' : prev?.description || ''),
-        content: data.extract || prev?.content || '',
-        image_url: data.originalimage?.source || data.thumbnail?.source || prev?.image_url || ''
-      }));
+      if (aiData && aiData.content) {
+        setEditingTopic(prev => ({
+          ...prev!,
+          id: aiData.id || prev?.id || '',
+          description: aiData.description || prev?.description || '',
+          content: aiData.content || prev?.content || '',
+          category: aiData.category || prev?.category || 'Science',
+          related_ids: aiData.related_ids || prev?.related_ids || [],
+          video_url: aiData.video_url || prev?.video_url || '',
+          image_url: imageUrl
+        }));
+      } else {
+        throw new Error("AI failed to generate.");
+      }
       
     } catch (err) {
-      alert('Failed to fetch from Wikipedia. Please verify the exact spelling of the topic title.');
+      alert('Failed to generate magic topic. Please verify the API key and try again.');
     } finally {
       setIsFetchingWiki(false);
     }
@@ -563,7 +582,7 @@ export function AdminDashboardPage() {
                         className="text-[10px] font-black uppercase tracking-widest text-secondary hover:text-accent transition-colors flex items-center gap-1 disabled:opacity-40"
                       >
                         {isFetchingWiki ? <Loader2 size={12} className="animate-spin" /> : <BookOpen size={12} />}
-                        Auto-fill from Wikipedia
+                        Magic AI Auto-fill
                       </button>
                     </div>
                     <input 
