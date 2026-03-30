@@ -15,7 +15,7 @@ export function Navbar() {
 
   const navLinks = [
     { name: 'Leaderboard', path: '/leaderboard' },
-    { name: isPro ? 'Billing' : 'Pricing', path: isPro ? 'https://buy.polar.sh/customer-portal' : '/pricing', external: isPro },
+    ...(!isPro ? [{ name: 'Pricing', path: '/pricing' }] : []),
     { name: 'About', path: '/about' },
   ];
 
@@ -48,10 +48,6 @@ export function Navbar() {
           <Link to="/" className="font-display text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
             unrot
           </Link>
-          <div className="hidden sm:flex items-center gap-2 bg-ink text-bg px-2 py-0.5 neo-border-sm">
-            <span className="text-[8px] uppercase font-black tracking-widest">LVL</span>
-            <span className="font-display text-sm">{level}</span>
-          </div>
           {isPro && (
             <div className="hidden sm:flex items-center gap-1 bg-accent text-bg px-2 py-0.5 neo-border-sm">
               <span className="text-[8px] uppercase font-black tracking-widest">PRO</span>

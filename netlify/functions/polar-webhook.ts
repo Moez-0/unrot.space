@@ -6,32 +6,39 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export const handler: Handler = async (event) => {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   // Only allow POST requests
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   const body = JSON.parse(event.body || "{}");
-  console.log("--- POLAR WEBHOOK START ---");
+  console.log("--- POLAR WEBHOOK DEBUG ---");
   console.log("Event Type:", body.type);
+  console.log("Full Body:", JSON.stringify(body, null, 2));
   
   try {
     const data = body.data;
-    // Log the full data object so we can see where user_id is hiding
-    console.log("Payload Data:", JSON.stringify(data, null, 2));
-
-    // Handle any event that indicates a successful payment or subscription
-    const successEvents = ["subscription.created", "subscription.updated", "order.paid", "order.created"];
+    // Polar.sh events that indicate an active subscription
+    const successEvents = [
+      "subscription.created", 
+      "subscription.updated", 
+      "subscription.active", 
+      "order.paid", 
+      "order.created"
+    ];
     
     if (successEvents.includes(body.type)) {
-      // Try to find user_id in every possible location Polar might put it
+      // Try every possible metadata path
       const userId = 
         data.metadata?.user_id || 
         data.customer_metadata?.user_id || 
-        data.custom_field_data?.user_id ||
-        (data.metadata ? JSON.parse(JSON.stringify(data.metadata)).user_id : null);
+        (data.metadata && typeof data.metadata === 'string' ? JSON.parse(data.metadata).user_id : null);
 
-      console.log("Discovered User ID:", userId);
+      console.log("Extracted User ID:", userId);
 
       if (userId) {
         const { error } = await supabase
@@ -40,12 +47,12 @@ export const handler: Handler = async (event) => {
           .eq("id", userId);
 
         if (error) {
-          console.error("Supabase Update Failed:", error.message);
+          console.error("Supabase Update Error:", error.message);
           throw error;
         }
         console.log(`>>> SUCCESS: User ${userId} is now PRO <<<`);
       } else {
-        console.error("CRITICAL: No user_id found in the webhook payload. Check your Polar.sh checkout link metadata.");
+        console.error("CRITICAL: No user_id found. Metadata might be missing from the checkout session.");
       }
     }
     

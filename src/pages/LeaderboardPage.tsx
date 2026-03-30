@@ -13,7 +13,12 @@ export function LeaderboardPage() {
       try {
         const { data, error } = await supabase
           .from('sessions')
-          .select('*, profiles(subscription_tier)')
+          .select(`
+            *,
+            profiles!user_id (
+              subscription_tier
+            )
+          `)
           .order('focus_score', { ascending: false })
           .limit(100);
 
@@ -66,16 +71,15 @@ export function LeaderboardPage() {
           </div>
         ) : (
           <div className="neo-card bg-white overflow-hidden">
-            <div className="grid grid-cols-5 bg-ink text-bg p-4 text-[10px] uppercase tracking-widest font-black">
+            <div className="grid grid-cols-4 bg-ink text-bg p-4 text-[10px] uppercase tracking-widest font-black">
               <div className="col-span-2">Thinker</div>
               <div className="text-center">Depth</div>
-              <div className="text-center">Level</div>
               <div className="text-right">Score</div>
             </div>
             <div className="divide-y-4 divide-ink">
               {leaders.length > 0 ? (
                 leaders.map((leader, i) => (
-                  <div key={leader.id} className="grid grid-cols-5 p-6 items-center hover:bg-primary/5 transition-colors">
+                  <div key={leader.id} className="grid grid-cols-4 p-6 items-center hover:bg-primary/5 transition-colors">
                     <div className="col-span-2 flex items-center gap-4">
                       <div className={`w-10 h-10 neo-border-sm flex items-center justify-center font-black ${i < 3 ? 'bg-accent text-bg' : 'bg-white text-ink'}`}>
                         {i + 1}
@@ -93,7 +97,6 @@ export function LeaderboardPage() {
                       </div>
                     </div>
                     <div className="text-center font-display text-2xl">{leader.depth}</div>
-                    <div className="text-center font-display text-2xl text-primary">{leader.depth + 1}</div>
                     <div className="text-right font-display text-2xl text-accent">{leader.focus_score}</div>
                   </div>
                 ))

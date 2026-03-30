@@ -298,11 +298,6 @@ export function TopicPage() {
                           <span className="text-[10px] uppercase font-black opacity-40 mb-1">Read Time</span>
                           <span className="font-mono font-bold">~{Math.ceil(topic.content.split(' ').length / 200)} Min</span>
                         </div>
-                        <div className="w-[1px] h-8 bg-ink/10" />
-                        <div className="flex flex-col items-center">
-                          <span className="text-[10px] uppercase font-black opacity-40 mb-1">Focus Level</span>
-                          <span className="font-mono font-bold">Deep</span>
-                        </div>
                       </div>
                       <p className="text-2xl md:text-3xl font-bold text-ink/90 leading-tight max-w-3xl mx-auto italic border-l-4 border-primary pl-8 text-left">
                         "{topic.description}"

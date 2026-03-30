@@ -93,37 +93,6 @@ export function SummaryPage() {
           </p>
         </div>
 
-        {/* Level Progress */}
-        <div className="neo-card bg-ink text-bg p-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-primary text-ink flex items-center justify-center neo-border font-display text-4xl">
-                {level}
-              </div>
-              <div>
-                <div className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-1">Current Level</div>
-                <h2 className="text-3xl font-display uppercase">Thinker Rank</h2>
-              </div>
-            </div>
-            <div className="flex-grow w-full max-w-md">
-              <div className="flex justify-between text-[10px] uppercase font-black mb-2">
-                <span>Progress to Level {level + 1}</span>
-                <span>{Math.floor(progressToNextLevel)}%</span>
-              </div>
-              <div className="h-4 bg-white/20 neo-border-sm overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressToNextLevel}%` }}
-                  className="h-full bg-primary"
-                />
-              </div>
-              <div className="text-[10px] uppercase font-black mt-2 opacity-40 text-right">
-                Total Focus: {totalScore}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Session Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="neo-card bg-white p-8 text-center">

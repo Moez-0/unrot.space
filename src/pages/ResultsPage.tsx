@@ -103,8 +103,6 @@ export function ResultsPage() {
                   </h1>
                   <div className="flex items-center justify-center gap-3">
                     <p className="text-xs font-black uppercase tracking-[0.3em] text-accent">Master Thinker</p>
-                    <div className="h-1 w-8 bg-ink/10" />
-                    <p className="text-xs font-black uppercase tracking-[0.3em] text-primary">Level {session.depth + 1}</p>
                   </div>
                 </div>
                 
@@ -127,7 +125,7 @@ export function ResultsPage() {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             <div className="neo-card bg-white p-8 text-center">
               <div className="text-[10px] uppercase font-black opacity-50 mb-2">Time Focused</div>
               <div className="text-3xl font-display uppercase">{formatTime(session.time_spent)}</div>
@@ -135,10 +133,6 @@ export function ResultsPage() {
             <div className="neo-card bg-white p-8 text-center">
               <div className="text-[10px] uppercase font-black opacity-50 mb-2">Depth Reached</div>
               <div className="text-3xl font-display uppercase">{session.depth} Levels</div>
-            </div>
-            <div className="neo-card bg-white p-8 text-center">
-              <div className="text-[10px] uppercase font-black opacity-50 mb-2">Current Level</div>
-              <div className="text-3xl font-display uppercase text-primary">Level {session.depth + 1}</div>
             </div>
             <div className="neo-card bg-primary p-8 text-center">
               <div className="text-[10px] uppercase font-black opacity-50 mb-2">Focus Score</div>
