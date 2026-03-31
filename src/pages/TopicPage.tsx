@@ -451,7 +451,14 @@ export function TopicPage() {
                                     {children}
                                   </p>
                                 );
-                              }
+                              },
+                              img: ({ node, ...props }) => (
+                                <img 
+                                  className="w-full neo-border-lg my-12 object-cover" 
+                                  loading="lazy"
+                                  {...props} 
+                                />
+                              )
                             }}
                           >
                             {processContent(topic.content)}

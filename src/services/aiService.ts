@@ -149,10 +149,11 @@ export async function generateMagicTopic(title: string, wikiSummary: string, exi
     "${wikiSummary}"
 
     Requirements for the Markdown:
-    - Must be extremely detailed and long (at least 1500 words, sprawling 8-10 paragraphs).
+    - Provide a detailed, engaging exploration of the topic (around 4-6 paragraphs). Do not make it unnecessarily overlong.
     - Make it profoundly interesting, connecting it to philosophy, science, or mind-blowing facts.
-    - Emphasize formatting: Use blockquotes, bold text, bullet points. Include at least 2 relevant images using Markdown syntax \`![image description](URL)\`. You can use placeholder URLs like Unsplash source (e.g. \`https://source.unsplash.com/800x600/?${encodeURIComponent(title)}\`) or wikimedia commons.
-    - If there are relevant mathematical or chemical formulas, include them using LaTeX format wrapped in $$ (e.g., $$ E = mc^2 $$).
+    - Emphasize readability using blockquotes, bold text, and bullet points where appropriate.
+    - ONLY if highly visual or practically necessary, include 1 relevant image using Markdown syntax \`![image description](https://source.unsplash.com/800x600/?keyword)\`. Do not force images if the topic is purely abstract.
+    - ONLY if highly relevant (e.g. Math, Physics, Chemistry), include formulas using LaTeX format wrapped in $$ (e.g., $$ E = mc^2 $$). Do not force math into non-mathematical topics.
     - Include real-world examples.
     - Do NOT include a main title # heading, just start with the body text.
 
