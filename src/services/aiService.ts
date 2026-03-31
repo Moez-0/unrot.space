@@ -1,8 +1,8 @@
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 import { supabase } from '../lib/supabase';
 
-// Using a reliable free model from OpenRouter
-const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+// Using a highly generous, un-rate-limited free model from OpenRouter
+const DEFAULT_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
 
 async function callOpenRouter(prompt: string, isJson: boolean = false) {
   if (!OPENROUTER_API_KEY) {
@@ -21,7 +21,6 @@ async function callOpenRouter(prompt: string, isJson: boolean = false) {
       },
       body: JSON.stringify({
         "model": DEFAULT_MODEL,
-        ...(isJson ? { "response_format": { "type": "json_object" } } : {}),
         "messages": [
           {
             "role": "user",
@@ -42,6 +41,19 @@ async function callOpenRouter(prompt: string, isJson: boolean = false) {
     return data.choices?.[0]?.message?.content || null;
   } catch (error) {
     console.error('Error calling OpenRouter:', error);
+    return null;
+  }
+}
+
+function extractJson(text: string) {
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('JSON Extraction failed:', e);
     return null;
   }
 }
@@ -109,7 +121,7 @@ export async function generateTopicInsights(topicTitle: string, content: string,
 
   const result = await callOpenRouter(prompt, true);
   try {
-    const insights = JSON.parse(result || '[]');
+    const insights = extractJson(result || '[]') || [];
     
     // Save to Supabase if we have a topic ID
     if (insights.length > 0 && topicId) {
@@ -137,16 +149,17 @@ export async function generateMagicTopic(title: string, wikiSummary: string, exi
     "${wikiSummary}"
 
     Requirements for the Markdown:
-    - Must be long (at least 6-8 paragraphs).
+    - Must be extremely detailed and long (at least 1500 words, sprawling 8-10 paragraphs).
     - Make it profoundly interesting, connecting it to philosophy, science, or mind-blowing facts.
+    - Emphasize formatting: Use blockquotes, bold text, bullet points. Include at least 2 relevant images using Markdown syntax \`![image description](URL)\`. You can use placeholder URLs like Unsplash source (e.g. \`https://source.unsplash.com/800x600/?${encodeURIComponent(title)}\`) or wikimedia commons.
     - If there are relevant mathematical or chemical formulas, include them using LaTeX format wrapped in $$ (e.g., $$ E = mc^2 $$).
     - Include real-world examples.
     - Do NOT include a main title # heading, just start with the body text.
 
     Requirements for metadata:
-    - Generate a clean, URL-safe 'slug' for this topic (e.g. quantum-mechanics).
+    - Generate a clean, URL-safe 'slug' for this topic (e.g. quantum-mechanics). Ensure it is highly relevant to "${title}".
     - Generate a powerful, one-sentence 'hook' description.
-    - Select 1 to 3 relevant 'related_ids' explicitly chosen from this list of existing topics: [${topicsList}]. If none are highly relevant, return an empty array.
+    - Analyze this list of existing topics: [${topicsList}]. You MUST select 1 to 3 IDs that are highly related to "${title}" and return them in 'related_ids'.
     - Select a 'category' from: Science, Math, Philosophy, Technology, History, Art.
     - If you know a spectacularly good, highly-relevant educational YouTube video explaining this, provide its URL (e.g., a Kurzgesagt, Veritasium, or closely related video URL). Otherwise leave null.
 
@@ -163,7 +176,7 @@ export async function generateMagicTopic(title: string, wikiSummary: string, exi
 
   const result = await callOpenRouter(prompt, true);
   try {
-    return JSON.parse(result || '{}');
+    return extractJson(result || '{}');
   } catch (e) {
     console.error('Failed to parse AI generated topic:', e);
     return null;

@@ -24,9 +24,13 @@ export function AdminLoginPage() {
 
       if (authError) throw authError;
 
-      // Optional: Check if the user is the designated admin
+      // Strict Check if the user is the designated admin
       const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-      if (adminEmail && data.user?.email !== adminEmail) {
+      if (!adminEmail) {
+        await supabase.auth.signOut();
+        throw new Error('Server configuration error: Admin email is not set.');
+      }
+      if (data.user?.email !== adminEmail) {
         await supabase.auth.signOut();
         throw new Error('Unauthorized access. Admin privileges required.');
       }

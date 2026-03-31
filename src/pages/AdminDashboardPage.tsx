@@ -37,7 +37,7 @@ export function AdminDashboardPage() {
       }
 
       const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-      if (adminEmail && session.user.email !== adminEmail) {
+      if (!adminEmail || session.user.email !== adminEmail) {
         await supabase.auth.signOut();
         localStorage.removeItem('admin_session');
         navigate('/admin/login');
@@ -321,7 +321,7 @@ export function AdminDashboardPage() {
                     Session Activity (7 Days)
                   </h3>
                   <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <AreaChart data={stats.chartData}>
                         <defs>
                           <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
@@ -348,7 +348,7 @@ export function AdminDashboardPage() {
                     Focus Score Trends
                   </h3>
                   <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <BarChart data={stats.chartData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
