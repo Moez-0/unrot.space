@@ -1,8 +1,8 @@
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 import { supabase } from '../lib/supabase';
 
-// Using a highly generous, un-rate-limited free model from OpenRouter
-const DEFAULT_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
+// Using a generous open-weights free model from OpenRouter
+const DEFAULT_MODEL = "google/gemma-3-27b-it:free";
 
 async function callOpenRouter(prompt: string, isJson: boolean = false) {
   if (!OPENROUTER_API_KEY) {
