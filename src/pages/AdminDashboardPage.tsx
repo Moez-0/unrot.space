@@ -27,13 +27,28 @@ export function AdminDashboardPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('admin_session');
-    if (!isAdmin) {
-      navigate('/admin/login');
-      return;
-    }
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        localStorage.removeItem('admin_session');
+        navigate('/admin/login');
+        return;
+      }
 
-    fetchData();
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+      if (adminEmail && session.user.email !== adminEmail) {
+        await supabase.auth.signOut();
+        localStorage.removeItem('admin_session');
+        navigate('/admin/login');
+        return;
+      }
+
+      localStorage.setItem('admin_session', 'true');
+      fetchData();
+    };
+
+    checkAuth();
   }, [navigate]);
 
   const fetchData = async () => {
@@ -53,7 +68,8 @@ export function AdminDashboardPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('admin_session');
     navigate('/admin/login');
   };

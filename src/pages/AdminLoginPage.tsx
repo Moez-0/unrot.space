@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, ArrowRight, Loader2, Mail } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export function AdminLoginPage() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,19 +17,24 @@ export function AdminLoginPage() {
     setError('');
 
     try {
-      // In a real app, this would be a server-side call
-      // For now, we'll use a simple check or a Supabase call if the table exists
-      // The user will need to set the ADMIN_PASSWORD in their environment
-      const adminPass = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-      
-      if (password === adminPass) {
-        localStorage.setItem('admin_session', 'true');
-        navigate('/admin/dashboard');
-      } else {
-        setError('Invalid password. Access denied.');
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) throw authError;
+
+      // Optional: Check if the user is the designated admin
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+      if (adminEmail && data.user?.email !== adminEmail) {
+        await supabase.auth.signOut();
+        throw new Error('Unauthorized access. Admin privileges required.');
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+
+      localStorage.setItem('admin_session', 'true');
+      navigate('/admin/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -49,16 +56,36 @@ export function AdminLoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="neo-card bg-white p-8 space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Password</label>
-            <input 
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-bg neo-border px-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
-              required
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Admin Email</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40" size={18} />
+                <input 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@unrot.space"
+                  className="w-full bg-bg neo-border pl-12 pr-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40" size={18} />
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-bg neo-border pl-12 pr-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           {error && (
