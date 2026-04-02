@@ -74,6 +74,8 @@ export function SummaryPage() {
     }
   };
 
+  const shareCaption = `I went ${depth} levels deep, focused for ${Math.floor(timeSpent / 60)}m, and scored ${focusScore} on unrot. Can you beat this? #unrot #focus #selfimprovement`;
+
   return (
     <div className="pt-24 sm:pt-32 pb-16 sm:pb-20 max-w-5xl mx-auto px-4 sm:px-6">
       <motion.div
@@ -141,6 +143,45 @@ export function SummaryPage() {
         </div>
 
         {/* Actions */}
+        <div className="neo-card bg-white p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <h3 className="text-2xl font-display uppercase">Share Card</h3>
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">TikTok-ready caption</span>
+          </div>
+
+          <div className="bg-ink text-bg neo-border-sm p-5 sm:p-6 max-w-md">
+            <div className="text-[10px] uppercase tracking-widest font-black text-primary mb-3">unrot focus result</div>
+            <div className="text-3xl font-display mb-3">{focusScore}</div>
+            <div className="space-y-1 text-sm font-bold opacity-80">
+              <div>Depth: {depth} levels</div>
+              <div>Time: {formatTime(timeSpent)}</div>
+              <div>Achievements: {earnedCount}</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(shareCaption);
+                alert('Caption copied for TikTok/IG.');
+              }}
+              className="neo-button bg-secondary text-ink px-5 py-3 text-sm uppercase font-black"
+            >
+              Copy Caption
+            </button>
+            <button
+              onClick={() => {
+                const url = sessionId ? `https://unrot.space/results/${sessionId}` : 'https://unrot.space';
+                navigator.clipboard.writeText(url);
+                alert('Share link copied.');
+              }}
+              className="neo-button bg-white text-ink px-5 py-3 text-sm uppercase font-black"
+            >
+              Copy Share Link
+            </button>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-4 pt-8 sm:pt-12 border-t-4 border-ink">
           <button 
             onClick={handleShare}

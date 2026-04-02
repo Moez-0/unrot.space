@@ -9,6 +9,14 @@ interface SessionStats {
   chain: string[];
 }
 
+interface DailyQuest {
+  id: string;
+  title: string;
+  target: number;
+  progress: number;
+  completed: boolean;
+}
+
 interface SessionContextType {
   isActive: boolean;
   startTime: number | null;
@@ -29,12 +37,15 @@ interface SessionContextType {
   resetSession: () => void;
   isSaving: boolean;
   user: User | null;
+  isAuthLoading: boolean;
   profile: Profile | null;
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   isPro: boolean;
   isProfileLoading: boolean;
   sessionLimitReached: boolean;
+  streakCount: number;
+  dailyQuest: DailyQuest;
   focusMode: 'default' | 'lofi' | 'nature' | 'deep-focus';
   setFocusMode: (mode: 'default' | 'lofi' | 'nature' | 'deep-focus') => void;
 }
@@ -49,10 +60,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [depth, setDepth] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
+  const [streakCount, setStreakCount] = useState(0);
+  const [dailyQuest, setDailyQuest] = useState<DailyQuest>({
+    id: 'daily-focus-12',
+    title: 'Focus for 12 minutes today',
+    target: 12 * 60,
+    progress: 0,
+    completed: false,
+  });
   const [focusMode, setFocusMode] = useState<'default' | 'lofi' | 'nature' | 'deep-focus'>('default');
+
+  const getDateKey = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getYesterdayKey = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return getDateKey(yesterday);
+  };
+
+  const getHabitStorageKeys = () => {
+    const suffix = user?.id || 'guest';
+    return {
+      streak: `unrot_streak_${suffix}`,
+      quest: `unrot_daily_quest_${suffix}`,
+    };
+  };
 
   useEffect(() => {
     // Check session count for today
@@ -69,6 +110,51 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    const { streak, quest } = getHabitStorageKeys();
+    const today = getDateKey();
+
+    try {
+      const savedStreak = localStorage.getItem(streak);
+      if (savedStreak) {
+        const parsed = JSON.parse(savedStreak);
+        setStreakCount(parsed?.count || 0);
+      } else {
+        setStreakCount(0);
+      }
+
+      const savedQuest = localStorage.getItem(quest);
+      if (savedQuest) {
+        const parsedQuest = JSON.parse(savedQuest);
+        if (parsedQuest?.date === today) {
+          setDailyQuest({
+            id: 'daily-focus-12',
+            title: 'Focus for 12 minutes today',
+            target: 12 * 60,
+            progress: parsedQuest.progress || 0,
+            completed: Boolean(parsedQuest.completed),
+          });
+        } else {
+          const resetQuest = {
+            date: today,
+            progress: 0,
+            completed: false,
+          };
+          localStorage.setItem(quest, JSON.stringify(resetQuest));
+          setDailyQuest({
+            id: 'daily-focus-12',
+            title: 'Focus for 12 minutes today',
+            target: 12 * 60,
+            progress: 0,
+            completed: false,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load habit data:', error);
+    }
+  }, [user?.id]);
+
   const isPro =
     profile?.subscription_tier?.toLowerCase() === 'pro' ||
     Boolean((profile as any)?.is_pro);
@@ -78,11 +164,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setIsAuthLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setIsAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -90,6 +178,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user) {
+      setIsProfileLoading(true);
       fetchProfile();
 
       // Listen for real-time changes to the user's profile
@@ -293,6 +382,56 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     
     // Update persistent total score
     setTotalScore(prev => prev + finalFocusScore);
+
+    const { streak, quest } = getHabitStorageKeys();
+    const today = getDateKey();
+    const yesterday = getYesterdayKey();
+
+    try {
+      const savedStreak = localStorage.getItem(streak);
+      const parsedStreak = savedStreak ? JSON.parse(savedStreak) : null;
+      const lastDate = parsedStreak?.lastCompletedDate || null;
+      const previousCount = parsedStreak?.count || 0;
+
+      let nextStreak = previousCount;
+      if (lastDate === today) {
+        nextStreak = previousCount || 1;
+      } else if (lastDate === yesterday) {
+        nextStreak = previousCount + 1;
+      } else {
+        nextStreak = 1;
+      }
+
+      localStorage.setItem(streak, JSON.stringify({
+        count: nextStreak,
+        lastCompletedDate: today,
+      }));
+      setStreakCount(nextStreak);
+
+      const savedQuest = localStorage.getItem(quest);
+      const parsedQuest = savedQuest ? JSON.parse(savedQuest) : null;
+
+      const baseProgress = parsedQuest?.date === today ? parsedQuest.progress || 0 : 0;
+      const nextProgress = baseProgress + finalElapsedTime;
+      const target = 12 * 60;
+      const completed = nextProgress >= target;
+
+      localStorage.setItem(quest, JSON.stringify({
+        date: today,
+        progress: Math.min(nextProgress, target),
+        completed,
+      }));
+
+      setDailyQuest({
+        id: 'daily-focus-12',
+        title: 'Focus for 12 minutes today',
+        target,
+        progress: Math.min(nextProgress, target),
+        completed,
+      });
+    } catch (error) {
+      console.error('Failed to update habit data:', error);
+    }
   };
 
   const saveSession = async (): Promise<string | null> => {
@@ -379,12 +518,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         resetSession,
         isSaving,
         user,
+        isAuthLoading,
         profile,
         signOut,
         fetchProfile,
         isPro,
         isProfileLoading,
         sessionLimitReached,
+        streakCount,
+        dailyQuest,
         focusMode,
         setFocusMode,
       }}

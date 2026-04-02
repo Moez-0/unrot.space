@@ -6,14 +6,17 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, Zap, Sparkles } from 'lucide-react';
 
 export function Navbar() {
-  const { isActive, startSession, user, isPro } = useSession();
+  const { isActive, startSession, user, isPro, isProfileLoading, isAuthLoading, streakCount, dailyQuest } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
+  const showPricing = !isAuthLoading && (!user || (!isPro && !isProfileLoading));
+
   const navLinks = [
     { name: 'Leaderboard', path: '/leaderboard' },
-    ...(!isPro ? [{ name: 'Pricing', path: '/pricing' }] : []),
+    { name: 'Battle', path: '/battle' },
+    ...(showPricing ? [{ name: 'Pricing', path: '/pricing' }] : []),
     { name: 'About', path: '/about' },
   ];
 
@@ -37,9 +40,14 @@ export function Navbar() {
           <Link to="/" className="font-display text-xl sm:text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
             unrot
           </Link>
-          {isPro && (
+          {user && (
+            <div className="hidden sm:flex items-center gap-1 bg-secondary/20 text-ink px-2 py-0.5 neo-border-sm">
+              <span className="text-[8px] uppercase font-black tracking-widest">Streak {streakCount}d</span>
+            </div>
+          )}
+          {user && (isPro || isProfileLoading) && (
             <div className="hidden sm:flex items-center gap-1 bg-accent text-bg px-2 py-0.5 neo-border-sm">
-              <span className="text-[8px] uppercase font-black tracking-widest">PRO</span>
+              <span className="text-[8px] uppercase font-black tracking-widest">{isProfileLoading ? '...' : 'PRO'}</span>
             </div>
           )}
         </div>
@@ -80,7 +88,7 @@ export function Navbar() {
               >
                 Profile
               </Link>
-              {!isPro && (
+              {!isProfileLoading && !isPro && (
                 <Link 
                   to="/pricing"
                   className="bg-accent text-bg px-3 py-1 neo-border-sm text-[8px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
@@ -89,14 +97,14 @@ export function Navbar() {
                 </Link>
               )}
             </div>
-          ) : (
+          ) : !isAuthLoading ? (
             <Link
               to="/auth"
               className="text-xs uppercase tracking-widest font-black transition-all hover:text-accent"
             >
               Sign In
             </Link>
-          )}
+          ) : null}
 
           <button
             onClick={handleStartSession}
@@ -159,7 +167,7 @@ export function Navbar() {
               >
                 Profile
               </Link>
-            ) : (
+            ) : !isAuthLoading ? (
               <Link
                 to="/auth"
                 onClick={() => setIsOpen(false)}
@@ -167,6 +175,11 @@ export function Navbar() {
               >
                 Sign In
               </Link>
+            ) : null}
+            {user && (
+              <div className="self-start px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black bg-secondary/20 text-ink">
+                Streak {streakCount}d · {Math.round((dailyQuest.progress / dailyQuest.target) * 100)}%
+              </div>
             )}
             <button
               onClick={handleStartSession}

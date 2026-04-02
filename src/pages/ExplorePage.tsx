@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Search, X, Filter, Zap } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 import { cn } from '../lib/utils';
+import { generateSmartPath } from '../services/aiService';
 
 export function ExplorePage() {
   const [topics, setTopics] = useState<any[]>([]);
@@ -17,6 +18,9 @@ export function ExplorePage() {
   const [searchParams] = useSearchParams();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [smartGoal, setSmartGoal] = useState('');
+  const [isGeneratingPath, setIsGeneratingPath] = useState(false);
+  const [smartPath, setSmartPath] = useState<{ pathTitle: string; reason: string; topicIds: string[] } | null>(null);
 
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
@@ -88,6 +92,12 @@ export function ExplorePage() {
     Array.from(new Set(topics.map(t => t.category))).sort()
   , [topics]);
 
+  const topicById = useMemo(() => {
+    const map = new Map<string, any>();
+    topics.forEach((topic) => map.set(topic.id, topic));
+    return map;
+  }, [topics]);
+
   const filteredTopics = useMemo(() => {
     return topics.filter(topic => {
       const matchesSearch = 
@@ -105,6 +115,37 @@ export function ExplorePage() {
     if (selectedCategory) return [selectedCategory];
     return Array.from(new Set(filteredTopics.map(t => t.category))).sort();
   }, [filteredTopics, selectedCategory]);
+
+  const handleGeneratePath = async () => {
+    if (!smartGoal.trim()) return;
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    if (!isPro) {
+      navigate('/pricing');
+      return;
+    }
+
+    setIsGeneratingPath(true);
+    setError(null);
+    try {
+      const proAccessibleTopics = topics.filter(topic => !topic.is_pro || isPro);
+      const result = await generateSmartPath(smartGoal, proAccessibleTopics);
+
+      if (!result || result.topicIds.length === 0) {
+        setError('Could not generate a path right now. Try refining your goal.');
+        return;
+      }
+
+      setSmartPath(result);
+    } catch (err) {
+      console.error('Smart path generation failed:', err);
+      setError('Smart path generation failed. Please try again.');
+    } finally {
+      setIsGeneratingPath(false);
+    }
+  };
 
   return (
     <>
@@ -202,6 +243,63 @@ export function ExplorePage() {
                   {category}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-8 neo-card bg-white p-5 sm:p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="font-display uppercase text-xl">Smart Path Generator</h3>
+                  <span className={cn(
+                    "text-[10px] uppercase tracking-widest font-black px-2 py-1 neo-border-sm",
+                    isPro ? "bg-accent text-bg" : "bg-ink/10 text-ink/50"
+                  )}>
+                    {isPro ? 'PRO' : 'Upgrade Required'}
+                  </span>
+                </div>
+
+                <p className="text-sm font-bold opacity-70">
+                  Enter a goal and get a guided 5-topic learning path.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={smartGoal}
+                    onChange={(e) => setSmartGoal(e.target.value)}
+                    placeholder="e.g., Understand quantum mechanics from scratch"
+                    className="flex-grow bg-bg neo-border px-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  />
+                  <button
+                    onClick={handleGeneratePath}
+                    disabled={isGeneratingPath || !smartGoal.trim()}
+                    className="neo-button bg-primary px-6 py-3 text-xs sm:text-sm uppercase font-black disabled:opacity-50"
+                  >
+                    {isGeneratingPath ? 'Generating...' : 'Generate Path'}
+                  </button>
+                </div>
+
+                {smartPath && (
+                  <div className="mt-2 p-4 bg-secondary/10 neo-border-sm">
+                    <h4 className="font-display uppercase text-lg mb-2">{smartPath.pathTitle}</h4>
+                    <p className="text-xs font-bold opacity-60 mb-4 uppercase tracking-widest">{smartPath.reason}</p>
+                    <div className="space-y-2">
+                      {smartPath.topicIds.map((topicId, index) => {
+                        const topic = topicById.get(topicId);
+                        return (
+                          <button
+                            key={`${topicId}-${index}`}
+                            onClick={() => topic && handleTopicClick(topic)}
+                            className="w-full text-left px-3 py-2 bg-white neo-border-sm hover:bg-primary/15 transition-colors"
+                          >
+                            <span className="text-[10px] uppercase font-black opacity-50 mr-2">Step {index + 1}</span>
+                            <span className="font-bold text-sm">{topic?.title || topicId}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         </header>

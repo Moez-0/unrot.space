@@ -183,3 +183,57 @@ export async function generateMagicTopic(title: string, wikiSummary: string, exi
     return null;
   }
 }
+
+export async function generateSmartPath(
+  goal: string,
+  topics: { id: string; title: string; description?: string; category?: string; is_pro?: boolean }[]
+) {
+  if (!goal.trim() || topics.length === 0) return null;
+
+  const topicCatalog = topics
+    .slice(0, 200)
+    .map((topic) => `${topic.id}|${topic.title}|${topic.category || 'General'}|${topic.description || ''}`)
+    .join('\n');
+
+  const prompt = `
+You are designing a learning path for a focused learner using an existing catalog.
+
+Learner goal: "${goal}"
+
+Available topics (id|title|category|description):
+${topicCatalog}
+
+Return strict JSON only in this exact format:
+{
+  "path_title": "string",
+  "reason": "string",
+  "topic_ids": ["id1", "id2", "id3", "id4", "id5"]
+}
+
+Rules:
+- Choose exactly 5 topic IDs from the provided catalog.
+- Order them from beginner to advanced progression.
+- Keep the reason short (1-2 sentences).
+- Do not invent IDs.
+`;
+
+  const result = await callOpenRouter(prompt, true);
+  const parsed = extractJson(result || '{}');
+
+  if (!parsed?.topic_ids || !Array.isArray(parsed.topic_ids)) {
+    return null;
+  }
+
+  const existingIds = new Set(topics.map(topic => topic.id));
+  const validIds = parsed.topic_ids.filter((id: string) => existingIds.has(id)).slice(0, 5);
+
+  if (validIds.length === 0) {
+    return null;
+  }
+
+  return {
+    pathTitle: parsed.path_title || `Path: ${goal}`,
+    reason: parsed.reason || 'A personalized path based on your goal.',
+    topicIds: validIds,
+  };
+}

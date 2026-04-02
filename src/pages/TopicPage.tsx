@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Topic } from '../data/topics';
 import { useSession } from '../context/SessionContext';
@@ -16,7 +16,7 @@ import { generateTopicInsights } from '../services/aiService';
 export function TopicPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, user, isPro, isProfileLoading, focusMode, setFocusMode } = useSession();
+  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, user, isPro, isProfileLoading, sessionLimitReached, focusMode, setFocusMode } = useSession();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [relatedTopics, setRelatedTopics] = useState<Topic[]>([]);
   const [furtherReading, setFurtherReading] = useState<Topic[]>([]);
@@ -107,7 +107,8 @@ export function TopicPage() {
             .limit(3);
           
           if (randomData) {
-            setFurtherReading(randomData as any);
+            const filteredReading = (randomData as any[]).filter((topicItem) => topicItem.id !== currentId && !chain.includes(topicItem.id));
+            setFurtherReading(filteredReading as any);
           }
         }
       } catch (err) {
@@ -133,35 +134,45 @@ export function TopicPage() {
   };
 
   useEffect(() => {
-    if (!topic && !id && !loading && !isActive) {
-      if (user) {
-        startSession();
-      } else {
-        navigate('/auth');
+    async function syncSessionState() {
+      if (!topic && !id && !loading && !isActive) {
+        if (user) {
+          try {
+            await startSession();
+          } catch (error: any) {
+            if (sessionLimitReached || error?.message?.includes('Session limit reached')) {
+              navigate('/pricing');
+            } else {
+              console.error('Failed to start session:', error);
+            }
+          }
+        } else {
+          navigate('/auth');
+        }
+        return;
       }
-      return;
-    }
-    
-    if (topic && !isActive) {
-      if (user) {
-        startSession(topic.id);
-      } else {
-        navigate('/auth');
+
+      if (topic && !isActive) {
+        if (user) {
+          try {
+            await startSession(topic.id);
+          } catch (error: any) {
+            if (sessionLimitReached || error?.message?.includes('Session limit reached')) {
+              navigate('/pricing');
+            } else {
+              console.error('Failed to start topic session:', error);
+            }
+          }
+        } else {
+          navigate('/auth');
+        }
+      } else if (topic && id && isActive) {
+        addToChain(topic.id);
       }
-    } else if (topic && id && isActive) {
-      addToChain(topic.id);
     }
-  }, [topic, id, isActive, loading, user]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <Loader2 className="animate-spin text-accent" size={48} />
-      </div>
-    );
-  }
-
-  if (!topic && !isActive) return null;
+    syncSessionState();
+  }, [topic, id, isActive, loading, user, sessionLimitReached]);
 
   const handleEndSession = () => {
     endSession();
@@ -190,6 +201,29 @@ export function TopicPage() {
       return line;
     }).join('\n');
   };
+
+  const nextTopicIds = useMemo(() => {
+    if (!topic) return [];
+    const seenIds = new Set(chain);
+    seenIds.add(topic.id);
+    return (topic.related || []).filter((relatedId) => !seenIds.has(relatedId));
+  }, [topic, chain]);
+
+  const fallbackNextTopics = useMemo(() => {
+    const seenIds = new Set(chain);
+    if (topic?.id) seenIds.add(topic.id);
+    return furtherReading.filter((readingTopic) => !seenIds.has(readingTopic.id)).slice(0, 2);
+  }, [furtherReading, chain, topic?.id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <Loader2 className="animate-spin text-accent" size={48} />
+      </div>
+    );
+  }
+
+  if (!topic && !isActive) return null;
 
   return (
     <>
@@ -503,7 +537,7 @@ export function TopicPage() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {topic.related.map((relatedId) => {
+                        {nextTopicIds.map((relatedId) => {
                           const relatedTopic = relatedTopics.find(t => t.id === relatedId);
                           return (
                             <Link 
@@ -521,6 +555,21 @@ export function TopicPage() {
                             </Link>
                           );
                         })}
+                        {nextTopicIds.length === 0 && fallbackNextTopics.map((fallbackTopic) => (
+                          <Link 
+                            key={fallbackTopic.id}
+                            to={`/topic/${fallbackTopic.id}`}
+                            className="neo-card bg-white hover:bg-ink hover:text-bg transition-all duration-300 p-6 sm:p-8 group flex justify-between items-center gap-4"
+                          >
+                            <div>
+                              <div className="text-[10px] uppercase font-black opacity-60 mb-2 group-hover:text-primary transition-colors">{fallbackTopic.category || 'Deep Dive'}</div>
+                              <div className="text-xl sm:text-2xl font-display uppercase">{fallbackTopic.title}</div>
+                            </div>
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-ink text-bg group-hover:bg-primary group-hover:text-ink flex items-center justify-center transition-all duration-300 shrink-0">
+                              <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+                            </div>
+                          </Link>
+                        ))}
                       </div>
                     </div>
                   </>
