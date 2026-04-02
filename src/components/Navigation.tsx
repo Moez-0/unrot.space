@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, Zap, Sparkles } from 'lucide-react';
 
 export function Navbar() {
-  const { isActive, startSession, user, profile, isPro } = useSession();
+  const { isActive, startSession, user, isPro } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -31,10 +31,10 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50">
-        <div className="bg-white neo-border px-6 h-14 flex items-center justify-between relative z-50">
+      <nav className="fixed top-3 sm:top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50">
+        <div className="bg-white neo-border px-3 sm:px-6 h-12 sm:h-14 flex items-center justify-between relative z-50">
         <div className="flex items-center gap-4">
-          <Link to="/" className="font-display text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
+          <Link to="/" className="font-display text-xl sm:text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
             unrot
           </Link>
           {isPro && (
@@ -74,11 +74,11 @@ export function Navbar() {
               <Link 
                 to="/profile"
                 className={cn(
-                  "text-[10px] font-black uppercase tracking-widest hover:text-accent transition-colors",
-                  location.pathname === '/profile' ? "text-accent" : "opacity-60"
+                  "px-3 py-1 neo-border-sm text-[8px] font-black uppercase tracking-widest transition-all",
+                  location.pathname === '/profile' ? "bg-secondary text-ink" : "bg-white text-ink hover:bg-secondary/40"
                 )}
               >
-                {profile?.user_name || user.email?.split('@')[0]}
+                Profile
               </Link>
               {!isPro && (
                 <Link 
@@ -110,7 +110,7 @@ export function Navbar() {
         {/* Mobile Toggle */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden p-2 text-ink"
+          className="md:hidden p-1.5 sm:p-2 text-ink"
         >
           {isOpen ? <X size={24} strokeWidth={3} /> : <Menu size={24} strokeWidth={3} />}
         </button>
@@ -123,7 +123,7 @@ export function Navbar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-16 left-0 w-full bg-white neo-border p-6 md:hidden flex flex-col gap-6 z-40"
+            className="absolute top-14 sm:top-16 left-0 w-full bg-white neo-border p-4 sm:p-6 md:hidden flex flex-col gap-4 sm:gap-6 z-40 max-h-[70vh] overflow-y-auto"
           >
             {navLinks.map((link) => (
               <Link
@@ -148,6 +148,26 @@ export function Navbar() {
             >
               Explore
             </Link>
+            {user ? (
+              <Link
+                to="/profile"
+                onClick={() => setIsOpen(false)}
+                className={cn(
+                  "self-start px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black transition-all",
+                  location.pathname === '/profile' ? "bg-secondary text-ink" : "bg-white text-ink hover:bg-secondary/40"
+                )}
+              >
+                Profile
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={() => setIsOpen(false)}
+                className="text-sm uppercase tracking-widest font-black transition-all text-ink"
+              >
+                Sign In
+              </Link>
+            )}
             <button
               onClick={handleStartSession}
               className="neo-button bg-primary text-center py-3 flex items-center justify-center gap-2"

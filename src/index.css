@@ -21,6 +21,13 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     background-color: var(--color-bg);
     color: var(--color-ink);
@@ -28,11 +35,27 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  img,
+  video,
+  iframe,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  a,
+  span {
+    overflow-wrap: anywhere;
   }
 }
 
@@ -88,6 +111,33 @@
   .neo-card:hover {
     transform: translate(-2px, -2px);
     box-shadow: var(--shadow-neo-lg);
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .markdown-body {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .markdown-body pre,
+  .markdown-body code,
+  .markdown-body .katex-display {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .markdown-body table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
   }
 }
 

@@ -12,7 +12,7 @@ import { cn } from '../lib/utils';
 export function ExplorePage() {
   const [topics, setTopics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isActive, startSession, user, isPro, sessionLimitReached } = useSession();
+  const { isActive, startSession, user, isPro, isProfileLoading, sessionLimitReached } = useSession();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
@@ -56,6 +56,10 @@ export function ExplorePage() {
   }, []);
 
   const handleTopicClick = async (topic: any) => {
+    if (topic.is_pro && user && isProfileLoading) {
+      return;
+    }
+
     if (topic.is_pro && !isPro) {
       navigate('/pricing');
       return;

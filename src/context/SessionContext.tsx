@@ -33,6 +33,7 @@ interface SessionContextType {
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   isPro: boolean;
+  isProfileLoading: boolean;
   sessionLimitReached: boolean;
   focusMode: 'default' | 'lofi' | 'nature' | 'deep-focus';
   setFocusMode: (mode: 'default' | 'lofi' | 'nature' | 'deep-focus') => void;
@@ -49,6 +50,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
   const [focusMode, setFocusMode] = useState<'default' | 'lofi' | 'nature' | 'deep-focus'>('default');
 
@@ -67,7 +69,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const isPro = profile?.subscription_tier === 'pro';
+  const isPro =
+    profile?.subscription_tier?.toLowerCase() === 'pro' ||
+    Boolean((profile as any)?.is_pro);
   const sessionLimitReached = !isPro && sessionCount >= 10;
 
   useEffect(() => {
@@ -113,11 +117,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       };
     } else {
       setProfile(null);
+      setIsProfileLoading(false);
     }
   }, [user]);
 
   const fetchProfile = async () => {
-    if (!user) return;
+    if (!user) {
+      setIsProfileLoading(false);
+      return;
+    }
+    setIsProfileLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -154,6 +163,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
+    } finally {
+      setIsProfileLoading(false);
     }
   };
 
@@ -372,6 +383,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         signOut,
         fetchProfile,
         isPro,
+        isProfileLoading,
         sessionLimitReached,
         focusMode,
         setFocusMode,

@@ -16,7 +16,7 @@ import { generateTopicInsights } from '../services/aiService';
 export function TopicPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, user, isPro, focusMode, setFocusMode } = useSession();
+  const { isActive, startSession, addToChain, elapsedTime, chain, endSession, isSaving, user, isPro, isProfileLoading, focusMode, setFocusMode } = useSession();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [relatedTopics, setRelatedTopics] = useState<Topic[]>([]);
   const [furtherReading, setFurtherReading] = useState<Topic[]>([]);
@@ -46,6 +46,10 @@ export function TopicPage() {
   }, [focusMode, isMuted, isActive]);
 
   useEffect(() => {
+    if (user && isProfileLoading) {
+      return;
+    }
+
     async function fetchTopic() {
       setLoading(true);
       const currentId = id || chain[chain.length - 1];
@@ -114,7 +118,7 @@ export function TopicPage() {
     }
 
     fetchTopic();
-  }, [id, chain, isPro]);
+  }, [id, chain, isPro, user, isProfileLoading]);
 
   const handleGenerateInsights = async (title: string, content: string, topicId: string) => {
     setIsGeneratingInsights(true);
@@ -230,20 +234,20 @@ export function TopicPage() {
       {isActive && (
         <>
           {/* Immersive Header */}
-          <header className="fixed top-0 left-0 w-full p-6 flex justify-between items-center z-50">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-ink text-bg px-4 py-2 neo-border-sm">
+          <header className="fixed top-0 left-0 w-full p-3 sm:p-4 md:p-6 flex justify-between items-start sm:items-center gap-3 z-50">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 max-w-[calc(100%-7rem)] sm:max-w-none">
+              <div className="flex items-center gap-2 bg-ink text-bg px-2.5 sm:px-4 py-1.5 sm:py-2 neo-border-sm">
                 <Clock size={16} className="animate-pulse" />
-                <span className="font-mono font-black text-lg">{formatTime(elapsedTime)}</span>
+                <span className="font-mono font-black text-sm sm:text-lg">{formatTime(elapsedTime)}</span>
               </div>
-              <div className="flex items-center gap-2 bg-accent text-bg px-4 py-2 neo-border-sm">
+              <div className="flex items-center gap-2 bg-accent text-bg px-2.5 sm:px-4 py-1.5 sm:py-2 neo-border-sm">
                 <Zap size={16} />
-                <span className="font-display font-black text-lg uppercase">Depth {chain.length}</span>
+                <span className="font-display font-black text-sm sm:text-lg uppercase">Depth {chain.length}</span>
               </div>
               {isPro && (
-                <div className="flex items-center gap-2 bg-primary text-ink px-4 py-2 neo-border-sm">
+                <div className="flex items-center gap-2 bg-primary text-ink px-2.5 sm:px-4 py-1.5 sm:py-2 neo-border-sm">
                   <Trophy size={16} />
-                  <span className="font-display font-black text-lg uppercase">Pro</span>
+                  <span className="font-display font-black text-sm sm:text-lg uppercase">Pro</span>
                 </div>
               )}
               
@@ -276,14 +280,15 @@ export function TopicPage() {
 
             <button 
               onClick={handleEndSession}
-              className="neo-button bg-accent text-bg px-4 py-2 text-xs flex items-center gap-2"
+              className="neo-button bg-accent text-bg px-3 sm:px-4 py-2 text-[10px] sm:text-xs flex items-center gap-2 shrink-0"
             >
               <LogOut size={14} />
-              END SESSION
+              <span className="hidden sm:inline">END SESSION</span>
+              <span className="sm:hidden">END</span>
             </button>
           </header>
 
-          <main className="flex-grow flex flex-col items-center justify-center pt-32 pb-32 px-6 max-w-4xl mx-auto w-full">
+          <main className="flex-grow flex flex-col items-center justify-center pt-36 sm:pt-32 pb-28 sm:pb-32 px-4 sm:px-6 max-w-5xl mx-auto w-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={topic?.id}
@@ -295,7 +300,7 @@ export function TopicPage() {
               >
                 {topic && (
                   <>
-                    <div className="text-center mb-20">
+                    <div className="text-center mb-12 sm:mb-20">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -303,23 +308,23 @@ export function TopicPage() {
                       >
                         {topic.category}
                       </motion.div>
-                      <h1 className="text-6xl md:text-9xl font-display uppercase leading-[0.8] mb-10 tracking-tighter">
+                      <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-9xl font-display uppercase leading-[0.85] md:leading-[0.8] mb-8 sm:mb-10 tracking-tighter">
                         {topic.title}
                       </h1>
-                      <div className="flex items-center justify-center gap-8 mb-12">
+                      <div className="flex items-center justify-center gap-6 sm:gap-8 mb-8 sm:mb-12">
                         <div className="flex flex-col items-center">
                           <span className="text-[10px] uppercase font-black opacity-40 mb-1">Read Time</span>
                           <span className="font-mono font-bold">~{Math.ceil(topic.content.split(' ').length / 200)} Min</span>
                         </div>
                       </div>
-                      <p className="text-2xl md:text-3xl font-bold text-ink/90 leading-tight max-w-3xl mx-auto italic border-l-4 border-primary pl-8 text-left">
+                      <p className="text-lg sm:text-2xl md:text-3xl font-bold text-ink/90 leading-tight max-w-3xl mx-auto italic border-l-4 border-primary pl-4 sm:pl-8 text-left">
                         "{topic.description}"
                       </p>
                     </div>
 
                     {/* Media Section */}
                     {(topic.video_url || topic.image_url) && (
-                      <div className="mb-24 neo-border-lg overflow-hidden bg-ink aspect-video relative group shadow-2xl">
+                      <div className="mb-14 sm:mb-24 neo-border-lg overflow-hidden bg-ink aspect-video relative group shadow-2xl">
                         {topic.video_url ? (
                           getYouTubeId(topic.video_url) ? (
                             <iframe 
@@ -350,17 +355,17 @@ export function TopicPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-24">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-14 sm:mb-24">
                       {/* Sidebar / Key Insights */}
-                      <div className="lg:col-span-4 space-y-12">
-                        <div className="neo-card bg-secondary/10 p-8 sticky top-32 space-y-12">
+                      <div className="lg:col-span-4 space-y-8 sm:space-y-12">
+                        <div className="neo-card bg-secondary/10 p-5 sm:p-8 sticky top-24 sm:top-32 space-y-8 sm:space-y-12">
                           {/* AI Deep Insights (Pro Feature) */}
                           <div className="bg-accent/5 p-6 neo-border-sm relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-2 opacity-10">
                               <Sparkles size={60} className="text-accent" />
                             </div>
                             <div className="relative z-10">
-                              <div className="flex items-center gap-2 mb-4">
+                              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                                 <Sparkles size={16} className="text-accent" />
                                 <h3 className="font-display uppercase text-sm">AI Deep Insights</h3>
                               </div>
@@ -383,9 +388,9 @@ export function TopicPage() {
                                   <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Thinking...</p>
                                 </div>
                               ) : aiInsights.length > 0 ? (
-                                <ul className="space-y-4">
+                                <ul className="space-y-3 sm:space-y-4">
                                   {aiInsights.map((insight, i) => (
-                                    <li key={i} className="text-[10px] font-bold leading-relaxed border-l-2 border-accent pl-3 italic">
+                                    <li key={i} className="text-xs sm:text-[10px] font-bold leading-relaxed border-l-2 border-accent pl-3 italic">
                                       {insight}
                                     </li>
                                   ))}
@@ -397,36 +402,36 @@ export function TopicPage() {
                           </div>
 
                           <div>
-                            <h3 className="font-display uppercase text-xl mb-6 flex items-center gap-2">
+                            <h3 className="font-display uppercase text-lg sm:text-xl mb-4 sm:mb-6 flex items-center gap-2">
                               <Zap size={20} className="text-accent" />
                               Key Insights
                             </h3>
-                            <ul className="space-y-6">
+                            <ul className="space-y-4 sm:space-y-6">
                               {topic.content.split('.').slice(0, 3).map((insight, i) => (
                                 <li key={i} className="flex gap-4">
                                   <span className="font-mono text-accent font-black">0{i+1}</span>
-                                  <p className="text-xs font-bold leading-relaxed opacity-80">{insight.trim()}.</p>
+                                  <p className="text-sm sm:text-xs font-bold leading-relaxed opacity-80">{insight.trim()}.</p>
                                 </li>
                               ))}
                             </ul>
                           </div>
 
-                          <div className="pt-8 border-t-2 border-ink/5">
+                          <div className="pt-6 sm:pt-8 border-t-2 border-ink/5">
                             <h3 className="font-display uppercase text-sm mb-4 opacity-40">Did You Know?</h3>
-                            <p className="text-xs font-bold italic leading-snug">
+                            <p className="text-sm sm:text-xs font-bold italic leading-snug">
                               This concept is one of the most searched topics for deep focus enthusiasts. 
                               Studying it for just 10 minutes can improve your cognitive flexibility.
                             </p>
                           </div>
 
-                          <div className="pt-8 border-t-2 border-ink/5">
+                          <div className="pt-6 sm:pt-8 border-t-2 border-ink/5">
                             <h3 className="font-display uppercase text-sm mb-4 opacity-40">Further Reading</h3>
                             <div className="space-y-3">
                               {furtherReading.map((t) => (
                                 <Link 
                                   key={t.id} 
                                   to={`/topic/${t.id}`} 
-                                  className="block text-[10px] font-black uppercase hover:text-accent transition-colors underline underline-offset-4"
+                                  className="block text-xs sm:text-[10px] font-black uppercase hover:text-accent transition-colors underline underline-offset-4"
                                 >
                                   {t.category}: {t.title}
                                 </Link>
@@ -438,7 +443,7 @@ export function TopicPage() {
 
                       {/* Main Content */}
                       <div className="lg:col-span-8">
-                        <div className="prose prose-2xl max-w-none font-bold text-ink leading-[1.4] tracking-tight markdown-body">
+                        <div className="prose prose-lg sm:prose-xl lg:prose-2xl max-w-none font-bold text-ink leading-[1.5] sm:leading-[1.4] tracking-tight markdown-body">
                           <Markdown
                             remarkPlugins={[remarkMath]}
                             rehypePlugins={[rehypeKatex]}
@@ -447,14 +452,14 @@ export function TopicPage() {
                                 // Check if this is the first paragraph to apply drop cap
                                 const isFirst = node?.position?.start.line === 1;
                                 return (
-                                  <p className={cn("mb-10 last:mb-0", isFirst && "first-letter:text-7xl first-letter:font-display first-letter:mr-3 first-letter:float-left first-letter:leading-[0.8] first-letter:text-primary")}>
+                                  <p className={cn("mb-7 sm:mb-10 last:mb-0", isFirst && "first-letter:text-4xl sm:first-letter:text-7xl first-letter:font-display first-letter:mr-3 first-letter:float-left first-letter:leading-[0.8] first-letter:text-primary")}>
                                     {children}
                                   </p>
                                 );
                               },
                               img: ({ node, ...props }) => (
                                 <img 
-                                  className="w-full neo-border-lg my-12 object-cover" 
+                                  className="w-full neo-border-lg my-8 sm:my-12 object-cover" 
                                   loading="lazy"
                                   {...props} 
                                 />
@@ -466,10 +471,10 @@ export function TopicPage() {
                         </div>
 
                         {/* Reflection Prompt */}
-                        <div className="mt-20 p-10 bg-ink text-bg neo-border-lg">
+                        <div className="mt-14 sm:mt-20 p-6 sm:p-10 bg-ink text-bg neo-border-lg">
                           <div className="text-[10px] uppercase font-black tracking-widest text-primary mb-4">Mindfulness Check</div>
-                          <h3 className="text-3xl font-display uppercase mb-6">Pause and Reflect</h3>
-                          <p className="text-lg opacity-80 mb-8 italic">
+                          <h3 className="text-2xl sm:text-3xl font-display uppercase mb-4 sm:mb-6">Pause and Reflect</h3>
+                          <p className="text-base sm:text-lg opacity-80 mb-6 sm:mb-8 italic">
                             How does this concept challenge your current understanding of the world? 
                             Take 30 seconds to breathe and let the information settle.
                           </p>
@@ -486,11 +491,11 @@ export function TopicPage() {
                     </div>
 
                     {/* Go Deeper Section */}
-                    <div className="mt-32 pt-20 border-t-4 border-ink">
+                    <div className="mt-20 sm:mt-32 pt-12 sm:pt-20 border-t-4 border-ink">
                       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                         <div>
                           <div className="text-[10px] uppercase tracking-[0.4em] font-black text-accent mb-4">The Journey Continues</div>
-                          <h2 className="text-5xl md:text-7xl font-display uppercase leading-none">Next <span className="text-primary">Steps.</span></h2>
+                          <h2 className="text-3xl sm:text-5xl md:text-7xl font-display uppercase leading-none">Next <span className="text-primary">Steps.</span></h2>
                         </div>
                         <p className="text-sm font-bold opacity-60 max-w-xs">
                           Choose your next rabbit hole. Each connection strengthens your focus and expands your mind.
@@ -504,13 +509,13 @@ export function TopicPage() {
                             <Link 
                               key={relatedId}
                               to={`/topic/${relatedId}`}
-                              className="neo-card bg-white hover:bg-ink hover:text-bg transition-all duration-300 p-8 group flex justify-between items-center"
+                              className="neo-card bg-white hover:bg-ink hover:text-bg transition-all duration-300 p-6 sm:p-8 group flex justify-between items-center gap-4"
                             >
                               <div>
                                 <div className="text-[10px] uppercase font-black opacity-60 mb-2 group-hover:text-primary transition-colors">{relatedTopic?.category || 'Deep Dive'}</div>
-                                <div className="text-2xl font-display uppercase">{relatedTopic?.title || relatedId.replace(/-/g, ' ')}</div>
+                                <div className="text-xl sm:text-2xl font-display uppercase">{relatedTopic?.title || relatedId.replace(/-/g, ' ')}</div>
                               </div>
-                              <div className="w-12 h-12 bg-ink text-bg group-hover:bg-primary group-hover:text-ink flex items-center justify-center transition-all duration-300">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-ink text-bg group-hover:bg-primary group-hover:text-ink flex items-center justify-center transition-all duration-300 shrink-0">
                                 <ChevronRight className="group-hover:translate-x-1 transition-transform" />
                               </div>
                             </Link>
@@ -525,14 +530,14 @@ export function TopicPage() {
           </main>
 
           {/* Subtle Chain Tracker at bottom */}
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 pointer-events-none">
+          <div className="fixed bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-3 sm:px-6 pointer-events-none">
             <div className="bg-white/80 backdrop-blur-sm neo-border-sm p-3 pointer-events-auto">
               <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-40 shrink-0">Chain:</span>
                 {chain.map((id, index) => {
                   return (
                     <div key={index} className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] font-black uppercase">{id.replace(/-/g, ' ')}</span>
+                      <span className="text-[10px] font-black uppercase max-w-[40vw] sm:max-w-none truncate">{id.replace(/-/g, ' ')}</span>
                       {index < chain.length - 1 && <ArrowRight size={10} className="opacity-40" />}
                     </div>
                   );

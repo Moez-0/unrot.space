@@ -31,6 +31,20 @@ The platform is hosted at [unrot.space](https://unrot.space) via Netlify.
 
 The platform includes a protected admin dashboard for managing topics and monitoring user engagement. Access is restricted to authorized administrators.
 
+## 🛡️ Supabase Security Patch (RLS)
+
+If Supabase Security Advisor reports rls_disabled_in_public, run the SQL patch in:
+
+- [supabase/security/2026-04-02-rls-hardening.sql](supabase/security/2026-04-02-rls-hardening.sql)
+
+How to apply:
+
+1. Open Supabase Dashboard → SQL Editor.
+2. Paste and run the script.
+3. Re-open Security Advisor and confirm the warning is resolved.
+
+Note: The script includes an admin email check function. Update the email inside the script if your admin account email differs.
+
 ## 📄 License
 
 This project is licensed under the MIT License.

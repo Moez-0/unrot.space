@@ -1,29 +1,43 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, SupabaseTopic, SupabaseSession } from '../lib/supabase';
+import { supabase, SupabaseTopic, SupabaseSession, Profile } from '../lib/supabase';
 import { generateMagicTopic } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area
+  AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import { 
   LayoutDashboard, BookOpen, Users, TrendingUp, Plus, Edit2, Trash2, 
-  X, Save, Loader2, LogOut, Search, Filter, ChevronRight, ArrowLeft,
-  Image as ImageIcon, Video as VideoIcon, Tag as TagIcon
+  X, Save, Loader2, LogOut, Search,
+  Image as ImageIcon, Crown, Menu, Clock, Target
 } from 'lucide-react';
 import { cn, formatTime } from '../lib/utils';
+
+type AdminTab = 'overview' | 'topics' | 'sessions' | 'users';
+
+type AdminUser = Profile;
 
 export function AdminDashboardPage() {
   const [topics, setTopics] = useState<SupabaseTopic[]>([]);
   const [sessions, setSessions] = useState<SupabaseSession[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'topics' | 'sessions'>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [editingTopic, setEditingTopic] = useState<Partial<SupabaseTopic> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<Partial<AdminUser> | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingUser, setIsSavingUser] = useState(false);
   const [isFetchingWiki, setIsFetchingWiki] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sessionSearch, setSessionSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [topicsPage, setTopicsPage] = useState(1);
+  const [sessionsPage, setSessionsPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,13 +68,15 @@ export function AdminDashboardPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [topicsRes, sessionsRes] = await Promise.all([
+      const [topicsRes, sessionsRes, usersRes] = await Promise.all([
         supabase.from('topics').select('*').order('created_at', { ascending: false }),
-        supabase.from('sessions').select('*').order('created_at', { ascending: false })
+        supabase.from('sessions').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').order('total_score', { ascending: false })
       ]);
 
       if (topicsRes.data) setTopics(topicsRes.data);
       if (sessionsRes.data) setSessions(sessionsRes.data);
+      if (usersRes.data) setUsers(usersRes.data as AdminUser[]);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -83,6 +99,56 @@ export function AdminDashboardPage() {
       setTopics(topics.filter(t => t.id !== id));
     } catch (err) {
       alert('Error deleting topic. Please try again.');
+    }
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    if (!window.confirm('Delete this session record?')) return;
+
+    try {
+      const { error } = await supabase.from('sessions').delete().eq('id', id);
+      if (error) throw error;
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      alert('Error deleting session. Please try again.');
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!window.confirm('Delete this user profile? This can affect user data visibility.')) return;
+
+    try {
+      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      if (error) throw error;
+      setUsers(prev => prev.filter(u => u.id !== id));
+    } catch (err) {
+      alert('Error deleting user profile. Please try again.');
+    }
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser?.id || !editingUser.user_name) return;
+
+    setIsSavingUser(true);
+    try {
+      const payload = {
+        id: editingUser.id,
+        user_name: editingUser.user_name,
+        total_score: editingUser.total_score ?? 0,
+        subscription_tier: editingUser.subscription_tier === 'pro' ? 'pro' : 'free'
+      };
+
+      const { error } = await supabase.from('profiles').upsert(payload);
+      if (error) throw error;
+
+      await fetchData();
+      setIsUserModalOpen(false);
+      setEditingUser(null);
+    } catch (err) {
+      alert('Error saving user profile. Please try again.');
+    } finally {
+      setIsSavingUser(false);
     }
   };
 
@@ -157,10 +223,18 @@ export function AdminDashboardPage() {
   const stats = useMemo(() => {
     const totalTopics = topics.length;
     const totalSessions = sessions.length;
+    const totalUsers = users.length;
+    const proUsers = users.filter(u => u.subscription_tier === 'pro').length;
+    const proTopics = topics.filter(t => t.is_pro).length;
+    const avgDepth = totalSessions > 0
+      ? Number((sessions.reduce((acc, s) => acc + s.depth, 0) / totalSessions).toFixed(1))
+      : 0;
     const avgFocusScore = totalSessions > 0 
       ? Math.round(sessions.reduce((acc, s) => acc + s.focus_score, 0) / totalSessions) 
       : 0;
     const totalTime = sessions.reduce((acc, s) => acc + s.time_spent, 0);
+    const estimatedMrr = Number((proUsers * 2.99).toFixed(2));
+    const estimatedArr = Number((estimatedMrr * 12).toFixed(2));
     
     // Group sessions by day for chart
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -175,13 +249,97 @@ export function AdminDashboardPage() {
       score: Math.round(sessions.filter(s => s.created_at.startsWith(date)).reduce((acc, s) => acc + s.focus_score, 0) / 10)
     }));
 
-    return { totalTopics, totalSessions, avgFocusScore, totalTime, chartData };
-  }, [topics, sessions]);
+    const categoryData = Object.entries(
+      topics.reduce<Record<string, number>>((acc, topic) => {
+        acc[topic.category] = (acc[topic.category] || 0) + 1;
+        return acc;
+      }, {})
+    ).map(([name, value]) => ({ name, value }));
+
+    const topUsers = [...users]
+      .sort((a, b) => (b.total_score || 0) - (a.total_score || 0))
+      .slice(0, 5);
+
+    const recentSessions = sessions.slice(0, 6);
+
+    return {
+      totalTopics,
+      totalSessions,
+      totalUsers,
+      proUsers,
+      proTopics,
+      avgDepth,
+      avgFocusScore,
+      totalTime,
+      estimatedMrr,
+      estimatedArr,
+      chartData,
+      categoryData,
+      topUsers,
+      recentSessions
+    };
+  }, [topics, sessions, users]);
 
   const filteredTopics = topics.filter(t => 
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredSessions = sessions.filter(s =>
+    (s.user_name || '').toLowerCase().includes(sessionSearch.toLowerCase()) ||
+    (s.id || '').toLowerCase().includes(sessionSearch.toLowerCase())
+  );
+
+  const filteredUsers = users.filter(u =>
+    (u.user_name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+    (u.id || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+    (u.subscription_tier || '').toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const navItems: { key: AdminTab; label: string; icon: any }[] = [
+    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { key: 'topics', label: 'Topics', icon: BookOpen },
+    { key: 'sessions', label: 'Sessions', icon: Clock },
+    { key: 'users', label: 'Users', icon: Users },
+  ];
+
+  const pieColors = ['#FFD600', '#00E0FF', '#FF4D00', '#1A1A1A', '#9CA3AF', '#84CC16'];
+
+  const topicsPageSize = 10;
+  const sessionsPageSize = 10;
+  const usersPageSize = 10;
+
+  const totalTopicsPages = Math.max(1, Math.ceil(filteredTopics.length / topicsPageSize));
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / sessionsPageSize));
+  const totalUsersPages = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize));
+
+  const paginatedTopics = filteredTopics.slice((topicsPage - 1) * topicsPageSize, topicsPage * topicsPageSize);
+  const paginatedSessions = filteredSessions.slice((sessionsPage - 1) * sessionsPageSize, sessionsPage * sessionsPageSize);
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize);
+
+  useEffect(() => {
+    setTopicsPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setSessionsPage(1);
+  }, [sessionSearch]);
+
+  useEffect(() => {
+    setUsersPage(1);
+  }, [userSearch]);
+
+  useEffect(() => {
+    if (topicsPage > totalTopicsPages) setTopicsPage(totalTopicsPages);
+  }, [topicsPage, totalTopicsPages]);
+
+  useEffect(() => {
+    if (sessionsPage > totalSessionsPages) setSessionsPage(totalSessionsPages);
+  }, [sessionsPage, totalSessionsPages]);
+
+  useEffect(() => {
+    if (usersPage > totalUsersPages) setUsersPage(totalUsersPages);
+  }, [usersPage, totalUsersPages]);
 
   if (loading) {
     return (
@@ -193,51 +351,59 @@ export function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-bg flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-ink text-bg flex flex-col sticky top-0 h-screen z-50">
-        <div className="p-8 border-b border-white/10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-ink font-black">U</div>
-            <h1 className="text-xl font-display uppercase tracking-tight">Unrot Admin</h1>
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-ink/50 z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={cn(
+        "w-72 bg-ink text-bg flex flex-col fixed inset-y-0 left-0 h-[100dvh] z-50 transition-transform duration-200",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-ink font-black">U</div>
+              <h1 className="text-xl font-display uppercase tracking-tight">Unrot Admin</h1>
+            </div>
+            <p className="text-[10px] font-black uppercase opacity-40 tracking-widest">Control Center</p>
           </div>
-          <p className="text-[10px] font-black uppercase opacity-40 tracking-widest">Control Center</p>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-bg/70 hover:text-bg">
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="flex-grow p-4 space-y-2">
-          <button 
-            onClick={() => setActiveTab('overview')}
-            className={cn(
-              "w-full flex items-center gap-4 px-4 py-3 font-bold text-xs uppercase tracking-widest transition-all",
-              activeTab === 'overview' ? "bg-primary text-ink neo-border-sm" : "hover:bg-white/5 opacity-60 hover:opacity-100"
-            )}
-          >
-            <LayoutDashboard size={18} />
-            Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab('topics')}
-            className={cn(
-              "w-full flex items-center gap-4 px-4 py-3 font-bold text-xs uppercase tracking-widest transition-all",
-              activeTab === 'topics' ? "bg-primary text-ink neo-border-sm" : "hover:bg-white/5 opacity-60 hover:opacity-100"
-            )}
-          >
-            <BookOpen size={18} />
-            Topics
-          </button>
-          <button 
-            onClick={() => setActiveTab('sessions')}
-            className={cn(
-              "w-full flex items-center gap-4 px-4 py-3 font-bold text-xs uppercase tracking-widest transition-all",
-              activeTab === 'sessions' ? "bg-primary text-ink neo-border-sm" : "hover:bg-white/5 opacity-60 hover:opacity-100"
-            )}
-          >
-            <Users size={18} />
-            Sessions
-          </button>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.key}
+                onClick={() => {
+                  setActiveTab(item.key);
+                  setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-4 px-4 py-3 font-bold text-xs uppercase tracking-widest transition-all",
+                  activeTab === item.key ? "bg-primary text-ink neo-border-sm" : "hover:bg-white/5 opacity-60 hover:opacity-100"
+                )}
+              >
+                <Icon size={18} />
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <button 
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-4 px-4 py-3 font-bold text-xs uppercase tracking-widest hover:bg-accent hover:text-bg transition-all"
           >
@@ -247,8 +413,42 @@ export function AdminDashboardPage() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-grow p-12 overflow-y-auto">
+      <main className="flex-grow w-full overflow-y-auto lg:ml-72">
+        <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur-sm border-b border-ink/10 lg:hidden">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="neo-border-sm bg-white w-9 h-9 flex items-center justify-center"
+            >
+              <Menu size={16} />
+            </button>
+            <h2 className="text-sm font-display uppercase">Admin Panel</h2>
+            <button
+              onClick={handleLogout}
+              className="neo-border-sm bg-accent text-bg px-3 py-1 text-[10px] uppercase font-black"
+            >
+              Logout
+            </button>
+          </div>
+          <div className="px-4 pb-3 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2 min-w-max">
+              {navItems.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveTab(item.key)}
+                  className={cn(
+                    "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest neo-border-sm",
+                    activeTab === item.key ? "bg-primary text-ink" : "bg-white text-ink"
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 lg:p-10">
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div 
@@ -256,21 +456,20 @@ export function AdminDashboardPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-12"
+              className="space-y-8"
             >
-              <div className="flex justify-between items-end">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                 <div>
-                  <h2 className="text-5xl font-display uppercase tracking-tight mb-2">Dashboard <span className="text-accent">Overview.</span></h2>
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display uppercase tracking-tight mb-2">Dashboard <span className="text-accent">Overview.</span></h2>
                   <p className="font-bold opacity-60 uppercase text-xs tracking-widest">Real-time platform performance</p>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <p className="text-[10px] font-black uppercase opacity-40 mb-1">Last Updated</p>
                   <p className="font-mono font-bold">{new Date().toLocaleTimeString()}</p>
                 </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
                 <div className="neo-card bg-white p-8">
                   <div className="flex justify-between items-start mb-4">
                     <div className="w-10 h-10 bg-primary/10 text-primary flex items-center justify-center neo-border-sm">
@@ -279,7 +478,7 @@ export function AdminDashboardPage() {
                     <TrendingUp size={16} className="text-green-500" />
                   </div>
                   <p className="text-[10px] font-black uppercase opacity-40 mb-1">Total Topics</p>
-                  <p className="text-4xl font-display uppercase">{stats.totalTopics}</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase">{stats.totalTopics}</p>
                 </div>
                 <div className="neo-card bg-white p-8">
                   <div className="flex justify-between items-start mb-4">
@@ -289,7 +488,7 @@ export function AdminDashboardPage() {
                     <TrendingUp size={16} className="text-green-500" />
                   </div>
                   <p className="text-[10px] font-black uppercase opacity-40 mb-1">Total Sessions</p>
-                  <p className="text-4xl font-display uppercase">{stats.totalSessions}</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase">{stats.totalSessions}</p>
                 </div>
                 <div className="neo-card bg-white p-8">
                   <div className="flex justify-between items-start mb-4">
@@ -299,7 +498,7 @@ export function AdminDashboardPage() {
                     <TrendingUp size={16} className="text-green-500" />
                   </div>
                   <p className="text-[10px] font-black uppercase opacity-40 mb-1">Avg Focus Score</p>
-                  <p className="text-4xl font-display uppercase">{stats.avgFocusScore}</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase">{stats.avgFocusScore}</p>
                 </div>
                 <div className="neo-card bg-white p-8">
                   <div className="flex justify-between items-start mb-4">
@@ -309,12 +508,38 @@ export function AdminDashboardPage() {
                     <TrendingUp size={16} className="text-green-500" />
                   </div>
                   <p className="text-[10px] font-black uppercase opacity-40 mb-1">Total Focus Time</p>
-                  <p className="text-4xl font-display uppercase">{Math.floor(stats.totalTime / 60)}m</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase">{Math.floor(stats.totalTime / 60)}m</p>
                 </div>
               </div>
 
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-2 xl:grid-cols-6 gap-4 sm:gap-6">
+                <div className="neo-card bg-white p-6">
+                  <p className="text-[10px] font-black uppercase opacity-40 mb-1">Total Users</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase">{stats.totalUsers}</p>
+                </div>
+                <div className="neo-card bg-white p-6">
+                  <p className="text-[10px] font-black uppercase opacity-40 mb-1">Pro Users</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase text-accent">{stats.proUsers}</p>
+                </div>
+                <div className="neo-card bg-white p-6">
+                  <p className="text-[10px] font-black uppercase opacity-40 mb-1">Pro Topics</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase text-secondary">{stats.proTopics}</p>
+                </div>
+                <div className="neo-card bg-white p-6">
+                  <p className="text-[10px] font-black uppercase opacity-40 mb-1">Avg Depth</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase">{stats.avgDepth}</p>
+                </div>
+                <div className="neo-card bg-white p-6">
+                  <p className="text-[10px] font-black uppercase opacity-40 mb-1">Est. Revenue MRR</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase text-primary">${stats.estimatedMrr}</p>
+                </div>
+                <div className="neo-card bg-white p-6">
+                  <p className="text-[10px] font-black uppercase opacity-40 mb-1">Est. Revenue ARR</p>
+                  <p className="text-2xl sm:text-4xl font-display uppercase text-secondary">${stats.estimatedArr}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div className="neo-card bg-white p-8">
                   <h3 className="text-xl font-display uppercase mb-8 flex items-center gap-3">
                     <TrendingUp size={20} className="text-accent" />
@@ -363,6 +588,82 @@ export function AdminDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="neo-card bg-white p-6 xl:col-span-1">
+                  <h3 className="text-xl font-display uppercase mb-6 flex items-center gap-3">
+                    <BookOpen size={18} className="text-accent" />
+                    Topic Mix
+                  </h3>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={stats.categoryData} dataKey="value" nameKey="name" outerRadius={100} innerRadius={45}>
+                          {stats.categoryData.map((entry, index) => (
+                            <Cell key={`cell-${entry.name}`} fill={pieColors[index % pieColors.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="neo-card bg-white p-6 xl:col-span-2">
+                  <h3 className="text-xl font-display uppercase mb-6 flex items-center gap-3">
+                    <Crown size={18} className="text-primary" />
+                    Top Users (Score)
+                  </h3>
+                  <div className="space-y-3">
+                    {stats.topUsers.map((user, index) => (
+                      <div key={user.id} className="flex items-center justify-between bg-ink/5 px-4 py-3 neo-border-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 bg-ink text-bg flex items-center justify-center text-[10px] font-black neo-border-sm">#{index + 1}</div>
+                          <div>
+                            <p className="font-bold text-sm">{user.user_name}</p>
+                            <p className="text-[10px] opacity-50 font-mono">{user.id.slice(0, 8)}...</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-display text-xl">{user.total_score}</p>
+                          <p className="text-[10px] uppercase font-black opacity-50">{user.subscription_tier}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="neo-card bg-white p-6">
+                <h3 className="text-xl font-display uppercase mb-6 flex items-center gap-3">
+                  <Target size={18} className="text-secondary" />
+                  Recent Sessions
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-left">
+                    <thead className="bg-ink text-bg">
+                      <tr>
+                        <th className="px-4 py-3 text-[10px] uppercase tracking-widest font-black">User</th>
+                        <th className="px-4 py-3 text-[10px] uppercase tracking-widest font-black">Duration</th>
+                        <th className="px-4 py-3 text-[10px] uppercase tracking-widest font-black">Depth</th>
+                        <th className="px-4 py-3 text-[10px] uppercase tracking-widest font-black">Score</th>
+                        <th className="px-4 py-3 text-[10px] uppercase tracking-widest font-black">When</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink/5">
+                      {stats.recentSessions.map((session) => (
+                        <tr key={session.id}>
+                          <td className="px-4 py-3 text-sm font-bold">{session.user_name || 'Anonymous'}</td>
+                          <td className="px-4 py-3 text-xs font-mono">{formatTime(session.time_spent)}</td>
+                          <td className="px-4 py-3 text-xs font-bold">{session.depth}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-accent">{session.focus_score}</td>
+                          <td className="px-4 py-3 text-xs opacity-60">{new Date(session.created_at).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -374,9 +675,9 @@ export function AdminDashboardPage() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              <div className="flex justify-between items-end">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                 <div>
-                  <h2 className="text-5xl font-display uppercase tracking-tight mb-2">Manage <span className="text-primary">Topics.</span></h2>
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display uppercase tracking-tight mb-2">Manage <span className="text-primary">Topics.</span></h2>
                   <p className="font-bold opacity-60 uppercase text-xs tracking-widest">Add, edit, or remove knowledge rabbit holes</p>
                 </div>
                 <button 
@@ -412,7 +713,8 @@ export function AdminDashboardPage() {
               </div>
 
               <div className="neo-card bg-white p-0 overflow-hidden">
-                <table className="w-full text-left">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-left">
                   <thead className="bg-ink text-bg">
                     <tr>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Topic</th>
@@ -423,7 +725,7 @@ export function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink/5">
-                    {filteredTopics.map((topic) => (
+                    {paginatedTopics.map((topic) => (
                       <tr key={topic.id} className="hover:bg-ink/5 transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
@@ -484,6 +786,28 @@ export function AdminDashboardPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
+                <div className="px-4 sm:px-6 py-4 border-t border-ink/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-[10px] font-black uppercase opacity-50 tracking-widest">
+                    Page {topicsPage} / {totalTopicsPages} · {filteredTopics.length} total
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setTopicsPage((p) => Math.max(1, p - 1))}
+                      disabled={topicsPage === 1}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setTopicsPage((p) => Math.min(totalTopicsPages, p + 1))}
+                      disabled={topicsPage === totalTopicsPages}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -496,15 +820,27 @@ export function AdminDashboardPage() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              <div className="flex justify-between items-end">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                 <div>
-                  <h2 className="text-5xl font-display uppercase tracking-tight mb-2">User <span className="text-secondary">Sessions.</span></h2>
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display uppercase tracking-tight mb-2">User <span className="text-secondary">Sessions.</span></h2>
                   <p className="font-bold opacity-60 uppercase text-xs tracking-widest">Monitor user engagement and focus metrics</p>
                 </div>
               </div>
 
+              <div className="relative flex-grow max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search sessions by user or id..."
+                  value={sessionSearch}
+                  onChange={(e) => setSessionSearch(e.target.value)}
+                  className="w-full bg-white neo-border px-12 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+
               <div className="neo-card bg-white p-0 overflow-hidden">
-                <table className="w-full text-left">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-left">
                   <thead className="bg-ink text-bg">
                     <tr>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">User</th>
@@ -512,10 +848,11 @@ export function AdminDashboardPage() {
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Depth</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Score</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Date</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink/5">
-                    {sessions.map((session) => (
+                    {paginatedSessions.map((session) => (
                       <tr key={session.id} className="hover:bg-ink/5 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -539,14 +876,167 @@ export function AdminDashboardPage() {
                         <td className="px-6 py-4 text-xs font-bold opacity-60">
                           {new Date(session.created_at).toLocaleString()}
                         </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => handleDeleteSession(session.id)}
+                            className="w-8 h-8 inline-flex items-center justify-center neo-border-sm bg-accent text-bg hover:bg-ink transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
+                <div className="px-4 sm:px-6 py-4 border-t border-ink/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-[10px] font-black uppercase opacity-50 tracking-widest">
+                    Page {sessionsPage} / {totalSessionsPages} · {filteredSessions.length} total
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSessionsPage((p) => Math.max(1, p - 1))}
+                      disabled={sessionsPage === 1}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setSessionsPage((p) => Math.min(totalSessionsPages, p + 1))}
+                      disabled={sessionsPage === totalSessionsPages}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'users' && (
+            <motion.div
+              key="users"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                <div>
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display uppercase tracking-tight mb-2">Manage <span className="text-accent">Users.</span></h2>
+                  <p className="font-bold opacity-60 uppercase text-xs tracking-widest">Edit profile, score, and subscription tier</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingUser({ id: '', user_name: '', total_score: 0, subscription_tier: 'free' });
+                    setIsUserModalOpen(true);
+                  }}
+                  className="neo-button bg-secondary text-ink px-6 py-3 flex items-center gap-2"
+                >
+                  <Plus size={18} />
+                  New Profile
+                </button>
+              </div>
+
+              <div className="relative flex-grow max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search users by name, id, tier..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full bg-white neo-border px-12 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+
+              <div className="neo-card bg-white p-0 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[950px] text-left">
+                    <thead className="bg-ink text-bg">
+                      <tr>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">User</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Tier</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Score</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Polar</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Created</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink/5">
+                      {paginatedUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-ink/5 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="font-bold text-sm">{user.user_name}</p>
+                              <p className="text-[10px] opacity-40 font-mono">{user.id}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={cn(
+                              "text-[10px] font-black uppercase px-2 py-1 neo-border-sm",
+                              user.subscription_tier === 'pro' ? 'bg-accent text-bg' : 'bg-ink/5 text-ink/50'
+                            )}>
+                              {user.subscription_tier}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-bold">{user.total_score}</td>
+                          <td className="px-6 py-4 text-[10px] font-mono opacity-60">
+                            {user.polar_subscription_id ? 'Connected' : '—'}
+                          </td>
+                          <td className="px-6 py-4 text-xs opacity-60">
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setIsUserModalOpen(true);
+                                }}
+                                className="w-8 h-8 flex items-center justify-center neo-border-sm bg-primary text-ink hover:bg-ink hover:text-bg transition-all"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="w-8 h-8 flex items-center justify-center neo-border-sm bg-accent text-bg hover:bg-ink transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 sm:px-6 py-4 border-t border-ink/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-[10px] font-black uppercase opacity-50 tracking-widest">
+                    Page {usersPage} / {totalUsersPages} · {filteredUsers.length} total
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                      disabled={usersPage === 1}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setUsersPage((p) => Math.min(totalUsersPages, p + 1))}
+                      disabled={usersPage === totalUsersPages}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </main>
 
       {/* Topic Modal */}
@@ -794,6 +1284,116 @@ export function AdminDashboardPage() {
                     type="button"
                     onClick={() => setIsModalOpen(false)}
                     className="neo-button bg-white text-ink px-8 py-4 font-display uppercase text-xl"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isUserModalOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsUserModalOpen(false)}
+              className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              className="relative w-full max-w-2xl bg-bg neo-border-lg"
+            >
+              <div className="p-5 sm:p-7 border-b-4 border-ink bg-white flex items-center justify-between">
+                <h3 className="text-2xl sm:text-3xl font-display uppercase">
+                  {editingUser?.created_at ? 'Edit User' : 'New User Profile'}
+                </h3>
+                <button onClick={() => setIsUserModalOpen(false)} className="hover:text-accent">
+                  <X size={26} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveUser} className="p-5 sm:p-7 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest opacity-60">User ID (UUID)</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingUser?.id || ''}
+                    onChange={(e) => setEditingUser(prev => ({ ...prev!, id: e.target.value }))}
+                    className="w-full bg-white neo-border px-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    placeholder="Supabase auth user id"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Display Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingUser?.user_name || ''}
+                      onChange={(e) => setEditingUser(prev => ({ ...prev!, user_name: e.target.value }))}
+                      className="w-full bg-white neo-border px-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Score</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={editingUser?.total_score ?? 0}
+                      onChange={(e) => setEditingUser(prev => ({ ...prev!, total_score: Number(e.target.value) || 0 }))}
+                      className="w-full bg-white neo-border px-4 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Subscription Tier</label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditingUser(prev => ({ ...prev!, subscription_tier: 'free' }))}
+                      className={cn(
+                        "flex-1 py-3 px-4 font-bold text-xs uppercase tracking-widest neo-border-sm transition-all",
+                        (editingUser?.subscription_tier || 'free') === 'free' ? 'bg-ink text-bg' : 'bg-white text-ink hover:bg-ink/5'
+                      )}
+                    >
+                      Free
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingUser(prev => ({ ...prev!, subscription_tier: 'pro' }))}
+                      className={cn(
+                        "flex-1 py-3 px-4 font-bold text-xs uppercase tracking-widest neo-border-sm transition-all",
+                        editingUser?.subscription_tier === 'pro' ? 'bg-accent text-bg' : 'bg-white text-ink hover:bg-ink/5'
+                      )}
+                    >
+                      Pro
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-3 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="submit"
+                    disabled={isSavingUser}
+                    className="flex-1 neo-button bg-primary text-ink py-3.5 flex items-center justify-center gap-3 font-display uppercase text-lg"
+                  >
+                    {isSavingUser ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} /> Save User</>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsUserModalOpen(false)}
+                    className="neo-button bg-white text-ink px-7 py-3.5 font-display uppercase text-lg"
                   >
                     Cancel
                   </button>

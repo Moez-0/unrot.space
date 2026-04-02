@@ -26,9 +26,9 @@ export function LandingPage() {
         <meta name="description" content="Tired of endless doomscrolling? Unrot your brain. An anti-brainrot platform designed to cure digital fatigue, restore deep focus, and help you reclaim your attention span." />
         <link rel="canonical" href="https://unrot.space" />
       </Helmet>
-      <div className="pt-24">
+      <div className="pt-20 sm:pt-24">
         {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 mb-24">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
         <div className="flex flex-col items-center text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -39,11 +39,11 @@ export function LandingPage() {
             <div className="inline-block bg-accent text-bg px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-6">
               The Ultimate Brainrot Cure
             </div>
-            <h1 className="text-6xl md:text-9xl leading-[0.8] font-display mb-8 uppercase">
+            <h1 className="text-4xl sm:text-6xl md:text-9xl leading-[0.85] md:leading-[0.8] font-display mb-6 sm:mb-8 uppercase">
               UNROT YOUR <br />
               <span className="text-primary bg-ink px-4 py-2 inline-block -rotate-2">BRAIN.</span>
             </h1>
-            <p className="text-lg md:text-2xl text-ink font-bold mb-6 leading-snug mx-auto max-w-2xl">
+            <p className="text-base sm:text-lg md:text-2xl text-ink font-bold mb-6 leading-snug mx-auto max-w-2xl">
               Endless doomscrolling is destroying your attention span. 
               Cure your digital fatigue and reclaim your focus through curated rabbit holes.
             </p>
@@ -52,10 +52,10 @@ export function LandingPage() {
               Most people can’t focus for 10 minutes. Try.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full">
               <button
                 onClick={handleStartSession}
-                className="neo-button bg-primary text-ink px-12 py-6 text-xl flex items-center gap-3 group"
+                className="neo-button bg-primary text-ink px-8 sm:px-12 py-4 sm:py-6 text-lg sm:text-xl flex items-center gap-3 group w-full sm:w-auto"
               >
                 <Play className="fill-ink group-hover:scale-110 transition-transform" size={24} />
                 START SESSION
@@ -72,12 +72,12 @@ export function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="max-w-7xl mx-auto px-6 mb-24">
-        <div className="bg-ink text-bg neo-border-lg p-12 relative overflow-hidden">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
+        <div className="bg-ink text-bg neo-border-lg p-6 sm:p-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
           
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-5xl font-display mb-12">How to cure brainrot.</h2>
+            <h2 className="text-3xl md:text-5xl font-display mb-8 sm:mb-12">How to cure brainrot.</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
@@ -111,8 +111,8 @@ export function LandingPage() {
       </section>
 
       {/* Quote Section */}
-      <section className="max-w-4xl mx-auto px-6 mb-24 text-center">
-        <div className="neo-card bg-primary/10 p-12">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24 text-center">
+        <div className="neo-card bg-primary/10 p-6 sm:p-12">
           <blockquote className="font-display text-2xl md:text-4xl font-black leading-tight uppercase tracking-tight">
             "The ability to focus without distraction is the superpower of the 21st century."
           </blockquote>
@@ -121,14 +121,14 @@ export function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="max-w-7xl mx-auto px-6 mb-24">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
-            <h2 className="text-5xl md:text-7xl font-display uppercase leading-none">
+            <h2 className="text-3xl sm:text-5xl md:text-7xl font-display uppercase leading-none">
               THE <span className="text-accent">COST</span> OF <br />
               <span className="text-primary">BRAINROT.</span>
             </h2>
-            <p className="text-lg font-bold leading-snug opacity-80">
+            <p className="text-base sm:text-lg font-bold leading-snug opacity-80">
               The modern attention economy is designed to keep you doomscrolling in a state of perpetual shallow engagement. 
               We're rapidly losing the ability to engage with complex ideas.
             </p>
@@ -148,9 +148,9 @@ export function LandingPage() {
               ))}
             </div>
           </div>
-          <div className="neo-card bg-ink text-bg p-12 flex flex-col justify-center aspect-square md:aspect-auto md:h-full">
-            <div className="text-6xl font-display text-primary mb-6">90%</div>
-            <p className="text-xl font-bold leading-tight uppercase tracking-tighter">
+          <div className="neo-card bg-ink text-bg p-6 sm:p-12 flex flex-col justify-center aspect-square md:aspect-auto md:h-full">
+            <div className="text-5xl sm:text-6xl font-display text-primary mb-6">90%</div>
+            <p className="text-lg sm:text-xl font-bold leading-tight uppercase tracking-tighter">
               Of digital content is consumed mindlessly. Unrot is for the other 10%.
             </p>
             <div className="mt-12 pt-12 border-t border-white/10">
@@ -163,23 +163,23 @@ export function LandingPage() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="max-w-7xl mx-auto px-6 mb-32">
-        <div className="bg-primary p-12 md:p-24 text-center neo-border-lg relative overflow-hidden">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-20 sm:mb-32">
+        <div className="bg-primary p-6 sm:p-12 md:p-24 text-center neo-border-lg relative overflow-hidden">
           <div className="absolute -top-12 -left-12 w-48 h-48 bg-white/20 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-accent/20 rounded-full blur-3xl"></div>
           
           <div className="relative z-10">
-            <h2 className="text-5xl md:text-8xl font-display uppercase leading-[0.8] mb-12">
+            <h2 className="text-3xl sm:text-5xl md:text-8xl font-display uppercase leading-[0.85] md:leading-[0.8] mb-8 sm:mb-12">
               READY TO <br />
               <span className="bg-ink text-bg px-4 py-2 inline-block rotate-1">RECLAIM?</span>
             </h2>
-            <p className="text-xl font-bold mb-12 max-w-2xl mx-auto">
+            <p className="text-base sm:text-xl font-bold mb-8 sm:mb-12 max-w-2xl mx-auto">
               Join thousands of thinkers who are choosing depth over doomscrolling. 
               Your first rabbit hole is waiting.
             </p>
             <button
               onClick={handleStartSession}
-              className="neo-button bg-ink text-bg px-12 py-6 text-2xl flex items-center gap-4 mx-auto hover:bg-accent transition-colors"
+              className="neo-button bg-ink text-bg px-8 sm:px-12 py-4 sm:py-6 text-lg sm:text-2xl flex items-center gap-4 mx-auto hover:bg-accent transition-colors w-full sm:w-auto"
             >
               <Zap className="fill-primary text-primary" size={28} />
               INITIATE UNROT

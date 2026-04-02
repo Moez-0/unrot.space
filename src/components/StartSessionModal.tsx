@@ -29,7 +29,7 @@ export function StartSessionModal({ isOpen, onClose, onConfirm }: StartSessionMo
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -41,7 +41,7 @@ export function StartSessionModal({ isOpen, onClose, onConfirm }: StartSessionMo
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative bg-white neo-border-lg p-8 w-full max-w-md"
+            className="relative bg-white neo-border-lg p-5 sm:p-8 w-full max-w-md"
           >
             <button 
               onClick={onClose}
@@ -50,17 +50,17 @@ export function StartSessionModal({ isOpen, onClose, onConfirm }: StartSessionMo
               <X size={24} />
             </button>
 
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-primary flex items-center justify-center neo-border mx-auto mb-4">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary flex items-center justify-center neo-border mx-auto mb-4">
                 <User size={32} />
               </div>
-              <h2 className="text-3xl font-display uppercase">Identify Yourself</h2>
+              <h2 className="text-2xl sm:text-3xl font-display uppercase">Identify Yourself</h2>
               <p className="text-xs font-bold opacity-60 uppercase tracking-widest mt-2">
                 Your name will be etched on the leaderboard.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-widest mb-2 opacity-50">
                   Thinker Name
@@ -79,7 +79,7 @@ export function StartSessionModal({ isOpen, onClose, onConfirm }: StartSessionMo
               <button
                 type="submit"
                 disabled={!name.trim()}
-                className="w-full neo-button bg-primary py-4 font-display uppercase text-xl flex items-center justify-center gap-3 disabled:opacity-50"
+                className="w-full neo-button bg-primary py-3 sm:py-4 font-display uppercase text-lg sm:text-xl flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 <Play size={20} className="fill-ink" />
                 ENTER THE VOID

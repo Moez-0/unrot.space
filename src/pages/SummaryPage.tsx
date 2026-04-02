@@ -23,7 +23,7 @@ export function SummaryPage() {
 
   if (!lastSessionStats) {
     return (
-      <div className="pt-32 pb-20 max-w-7xl mx-auto px-6 text-center">
+      <div className="pt-24 sm:pt-32 pb-16 sm:pb-20 max-w-7xl mx-auto px-4 sm:px-6 text-center">
         <div className="neo-card bg-white p-12 inline-block">
           <h1 className="text-4xl font-display mb-6 uppercase">No session data.</h1>
           <Link to="/" className="neo-button bg-primary px-8 py-3 inline-block">Go Home</Link>
@@ -75,7 +75,7 @@ export function SummaryPage() {
   };
 
   return (
-    <div className="pt-32 pb-20 max-w-5xl mx-auto px-6">
+    <div className="pt-24 sm:pt-32 pb-16 sm:pb-20 max-w-5xl mx-auto px-4 sm:px-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -85,10 +85,10 @@ export function SummaryPage() {
           <div className="inline-block bg-accent text-bg px-4 py-1 neo-border-sm text-xs uppercase font-black mb-6">
             Session Complete
           </div>
-          <h1 className="text-6xl md:text-8xl font-display uppercase leading-[0.8] mb-8">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-display uppercase leading-[0.85] md:leading-[0.8] mb-6 sm:mb-8">
             YOU WENT <span className="text-primary">DEEPER.</span>
           </h1>
-          <p className="text-xl font-bold opacity-60 uppercase tracking-widest">
+          <p className="text-base sm:text-xl font-bold opacity-60 uppercase tracking-widest">
             You went deeper than {comparisonPercent}% of users today.
           </p>
         </div>
@@ -97,15 +97,15 @@ export function SummaryPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="neo-card bg-white p-8 text-center">
             <div className="text-[10px] uppercase font-black opacity-50 mb-2">Time Spent</div>
-            <div className="text-4xl font-display uppercase">{formatTime(timeSpent)}</div>
+            <div className="text-3xl sm:text-4xl font-display uppercase">{formatTime(timeSpent)}</div>
           </div>
           <div className="neo-card bg-white p-8 text-center">
             <div className="text-[10px] uppercase font-black opacity-50 mb-2">Depth Reached</div>
-            <div className="text-4xl font-display uppercase">{depth} Levels</div>
+            <div className="text-3xl sm:text-4xl font-display uppercase">{depth} Levels</div>
           </div>
           <div className="neo-card bg-primary p-8 text-center">
             <div className="text-[10px] uppercase font-black opacity-50 mb-2">Focus Score</div>
-            <div className="text-4xl font-display uppercase">{focusScore}</div>
+            <div className="text-3xl sm:text-4xl font-display uppercase">{focusScore}</div>
           </div>
         </div>
 
@@ -141,10 +141,10 @@ export function SummaryPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-12 border-t-4 border-ink">
+        <div className="flex flex-col sm:flex-row gap-4 pt-8 sm:pt-12 border-t-4 border-ink">
           <button 
             onClick={handleShare}
-            className="neo-button bg-accent text-bg px-8 py-4 flex items-center justify-center gap-3 font-display uppercase text-xl"
+            className="neo-button bg-accent text-bg px-6 sm:px-8 py-3 sm:py-4 flex items-center justify-center gap-3 font-display uppercase text-base sm:text-xl"
           >
             <Share2 size={24} />
             Share Result
@@ -156,7 +156,7 @@ export function SummaryPage() {
                 navigator.clipboard.writeText(url);
                 alert("Link copied: " + url);
               }}
-              className="neo-button bg-ink text-bg px-8 py-4 flex items-center justify-center gap-3 font-display uppercase text-xl"
+              className="neo-button bg-ink text-bg px-6 sm:px-8 py-3 sm:py-4 flex items-center justify-center gap-3 font-display uppercase text-base sm:text-xl"
             >
               <Zap size={24} className="text-primary" />
               Copy Badge Link
@@ -167,14 +167,14 @@ export function SummaryPage() {
               resetSession();
               navigate('/');
             }}
-            className="neo-button bg-white text-ink px-8 py-4 flex items-center justify-center gap-3 font-display uppercase text-xl"
+            className="neo-button bg-white text-ink px-6 sm:px-8 py-3 sm:py-4 flex items-center justify-center gap-3 font-display uppercase text-base sm:text-xl"
           >
             <Home size={24} />
             Back Home
           </button>
           <Link 
             to="/leaderboard"
-            className="neo-button bg-secondary text-ink px-8 py-4 flex items-center justify-center gap-3 font-display uppercase text-xl"
+            className="neo-button bg-secondary text-ink px-6 sm:px-8 py-3 sm:py-4 flex items-center justify-center gap-3 font-display uppercase text-base sm:text-xl"
           >
             <Trophy size={24} />
             Leaderboard
