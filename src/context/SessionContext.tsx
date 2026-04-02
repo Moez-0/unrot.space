@@ -95,6 +95,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const getFallbackDisplayName = () => {
+    const rawName =
+      user?.user_metadata?.user_name ||
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      user?.user_metadata?.preferred_username ||
+      user?.user_metadata?.given_name;
+
+    const cleanedName = typeof rawName === 'string' ? rawName.trim() : '';
+    if (cleanedName) return cleanedName;
+
+    const emailName = user?.email?.split('@')[0]?.trim();
+    if (emailName) return emailName;
+
+    return 'Thinker';
+  };
+
   useEffect(() => {
     // Check session count for today
     const lastReset = localStorage.getItem('unrot_session_reset_date');
@@ -225,7 +242,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       if (error && error.code === 'PGRST116') {
         // Profile doesn't exist, create it
-        const name = user.user_metadata.user_name || user.email?.split('@')[0] || 'Thinker';
+        const name = getFallbackDisplayName();
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert([
@@ -245,10 +262,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('unrot_user_name', newProfile.user_name);
         }
       } else if (data) {
-        setProfile(data);
+        const normalizedName = (data.user_name || '').trim() || getFallbackDisplayName();
+
+        setProfile({
+          ...data,
+          user_name: normalizedName,
+        });
         setTotalScore(data.total_score);
-        setUserNameState(data.user_name);
-        localStorage.setItem('unrot_user_name', data.user_name);
+        setUserNameState(normalizedName);
+        localStorage.setItem('unrot_user_name', normalizedName);
+
+        if (!(data.user_name || '').trim()) {
+          await supabase
+            .from('profiles')
+            .update({ user_name: normalizedName })
+            .eq('id', user.id);
+        }
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -271,7 +300,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user && !userName) {
-      const name = user.user_metadata.user_name || user.email?.split('@')[0] || 'Thinker';
+      const name = getFallbackDisplayName();
       setUserNameState(name);
       localStorage.setItem('unrot_user_name', name);
     }
