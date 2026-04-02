@@ -1,14 +1,46 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Zap, Eye, Brain, Play } from 'lucide-react';
+import { ArrowRight, Zap, Play, Sparkles, Swords, Share2, Target, Flame } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useSession } from '../context/SessionContext';
-import { useState } from 'react';
 
 export function LandingPage() {
   const { startSession, user } = useSession();
   const navigate = useNavigate();
+
+  const featureHighlights = [
+    {
+      icon: Flame,
+      title: 'Daily streaks + quests',
+      desc: 'Keep a focus habit alive with streak tracking, daily quests, and progress right in the navbar.',
+      tag: 'Free',
+    },
+    {
+      icon: Swords,
+      title: 'Battle mode duels',
+      desc: 'Challenge yourself in fast timed rounds and win with better depth, speed, and accuracy.',
+      tag: 'Free',
+    },
+    {
+      icon: Target,
+      title: 'Pro smart paths',
+      desc: 'Turn a goal into a guided 5-step learning path built from existing rabbit holes.',
+      tag: 'Pro',
+    },
+    {
+      icon: Sparkles,
+      title: 'AI deep insights',
+      desc: 'Unlock deeper analysis on topics and session context for richer learning.',
+      tag: 'Pro',
+    },
+    {
+      icon: Share2,
+      title: 'Shareable recap cards',
+      desc: 'Copy a TikTok-ready caption and share your session score, depth, and chain instantly.',
+      tag: 'Free',
+    },
+  ];
 
   const handleStartSession = () => {
     if (user) {
@@ -71,6 +103,56 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Feature Highlights */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
+        <div className="flex items-end justify-between gap-6 mb-8 sm:mb-10">
+          <div>
+            <div className="inline-block bg-secondary text-ink px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-4">
+              New product features
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-display uppercase leading-tight">
+              Built to make focus <span className="text-accent">stick.</span>
+            </h2>
+          </div>
+          <Link
+            to="/pricing"
+            className="hidden md:inline-flex items-center gap-2 text-xs uppercase tracking-widest font-black hover:text-accent transition-colors"
+          >
+            See pricing <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          {featureHighlights.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ delay: index * 0.06 }}
+              className="neo-card bg-white p-6 sm:p-7 flex flex-col gap-5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="w-12 h-12 neo-border-sm bg-primary text-ink flex items-center justify-center shrink-0">
+                  <feature.icon size={22} />
+                </div>
+                <span className={cn(
+                  'text-[10px] uppercase tracking-widest font-black px-2 py-1 neo-border-sm',
+                  feature.tag === 'Pro' ? 'bg-accent text-bg' : 'bg-secondary text-ink'
+                )}>
+                  {feature.tag}
+                </span>
+              </div>
+
+              <div>
+                <h3 className="font-display uppercase text-2xl mb-3 leading-none">{feature.title}</h3>
+                <p className="text-sm sm:text-base font-bold leading-relaxed opacity-75">{feature.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
         <div className="bg-ink text-bg neo-border-lg p-6 sm:p-12 relative overflow-hidden">
@@ -117,6 +199,60 @@ export function LandingPage() {
             "The ability to focus without distraction is the superpower of the 21st century."
           </blockquote>
           <cite className="block mt-8 text-[10px] uppercase tracking-[0.3em] font-black text-muted">— Cal Newport</cite>
+        </div>
+      </section>
+
+      {/* Feature Loop */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div className="lg:col-span-5 neo-card bg-white p-6 sm:p-8">
+            <div className="inline-block bg-primary text-ink px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-4">
+              Why it works
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-display uppercase leading-tight mb-5">
+              A product loop <span className="text-primary">built for retention.</span>
+            </h2>
+            <p className="text-sm sm:text-base font-bold leading-relaxed opacity-75 mb-6">
+              Every session now feeds the next one: streaks keep you coming back, battle mode keeps it fun,
+              share cards make it social, and Pro smart paths turn curiosity into a real learning plan.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {['Streaks', 'Quests', 'Battle', 'Share', 'Smart Paths'].map((item) => (
+                <span key={item} className="bg-ink text-bg px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 neo-card bg-primary p-6 sm:p-8 flex items-center justify-center">
+            <div className="w-full bg-white neo-border-lg p-6 sm:p-8">
+              <div className="flex items-center justify-between gap-4 mb-5">
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest font-black opacity-40 mb-1">Session recap</div>
+                  <h3 className="font-display uppercase text-2xl sm:text-3xl">Shareable by default</h3>
+                </div>
+                <Sparkles className="text-accent" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+                {[
+                  { label: 'Score', value: '420' },
+                  { label: 'Depth', value: '7' },
+                  { label: 'Time', value: '18m' },
+                ].map((item) => (
+                  <div key={item.label} className="bg-secondary/15 neo-border-sm p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-widest font-black opacity-50">{item.label}</div>
+                    <div className="text-2xl font-display uppercase mt-1">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-sm font-bold opacity-70 leading-relaxed">
+                Turn completed sessions into a story worth sharing with one-click captions, link copy, and vertical-ready recap cards.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

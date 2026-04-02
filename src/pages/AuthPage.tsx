@@ -1,20 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion } from 'motion/react';
-import { User, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, Loader2, ArrowRight, Chrome } from 'lucide-react';
+import { useSession } from '../context/SessionContext';
 
 export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userName, setUserName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthLoading } = useSession();
   const searchParams = new URLSearchParams(location.search);
   const redirectPath = searchParams.get('redirect') || '/';
+
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, isAuthLoading, navigate, redirectPath]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,11 +50,29 @@ export function AuthPage() {
         if (authError) throw authError;
         alert('Check your email for the confirmation link!');
       }
-      navigate(redirectPath);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(redirectPath)}`,
+        },
+      });
+
+      if (authError) throw authError;
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed.');
+      setGoogleLoading(false);
     }
   };
 
@@ -64,6 +91,29 @@ export function AuthPage() {
             <p className="text-xs font-black uppercase tracking-widest opacity-40">
               {isLogin ? 'Your focus awaits.' : 'Start your journey to depth.'}
             </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={loading || googleLoading}
+            className="w-full neo-button bg-white text-ink py-4 font-display uppercase text-lg flex items-center justify-center gap-3 mb-6"
+          >
+            {googleLoading ? (
+              <Loader2 className="animate-spin" size={22} />
+            ) : (
+              <>
+                <Chrome size={20} />
+                Continue with Google
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+
+          <div className="flex items-center gap-3 my-6">
+            <div className="h-px flex-1 bg-ink/10" />
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">or use email</span>
+            <div className="h-px flex-1 bg-ink/10" />
           </div>
 
           <form onSubmit={handleAuth} className="space-y-6">
@@ -122,7 +172,7 @@ export function AuthPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || googleLoading}
               className="w-full neo-button bg-accent text-bg py-4 font-display uppercase text-xl flex items-center justify-center gap-3"
             >
               {loading ? (

@@ -1,10 +1,18 @@
 import { motion } from 'motion/react';
-import { Check, Zap, Trophy, Award, ArrowRight, Shield, Star, Crown } from 'lucide-react';
+import { Check, Zap, Trophy, Award, ArrowRight, Shield, Star, Crown, Sparkles, Swords, Target, Share2, Flame } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 import { Link } from 'react-router-dom';
 
 export function PricingPage() {
   const { isPro, user } = useSession();
+
+  const featureSpotlights = [
+    { icon: Flame, title: 'Daily streaks + quests', description: 'Habit-building motivation for every day.', plan: 'Free' },
+    { icon: Swords, title: 'Battle mode duels', description: 'Timed, game-like focus challenges.', plan: 'Free' },
+    { icon: Share2, title: 'Share cards', description: 'Caption and link copy for social sharing.', plan: 'Free' },
+    { icon: Target, title: 'Pro smart paths', description: 'Goal-based AI paths from existing topics.', plan: 'Pro' },
+    { icon: Sparkles, title: 'AI deep insights', description: 'More context and analysis on Pro topics.', plan: 'Pro' },
+  ];
 
   const plans = [
     {
@@ -16,6 +24,9 @@ export function PricingPage() {
         'Access to basic topics',
         'Global leaderboard',
         'Basic achievements',
+        'Daily streaks + quests',
+        'Battle mode duels',
+        'Shareable recap cards',
       ],
       buttonText: 'Current Plan',
       buttonClass: 'bg-bg text-ink opacity-50 cursor-not-allowed',
@@ -32,6 +43,8 @@ export function PricingPage() {
         'Access to ALL Pro topics',
         'Unlimited session history',
         'Personalized knowledge paths',
+        'AI Deep Insights',
+        'Advanced topic analysis',
         'Custom focus ambience',
         'Pro badge on leaderboard',
       ],
@@ -60,6 +73,48 @@ export function PricingPage() {
           <p className="text-xl font-bold opacity-60 uppercase tracking-widest max-w-2xl mx-auto">
             Choose the plan that fits your journey to reclaiming focus.
           </p>
+        </div>
+
+        <div className="mb-16 neo-card bg-white p-6 sm:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
+            <div>
+              <div className="inline-block bg-secondary text-ink px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-4">
+                What’s new
+              </div>
+              <h2 className="text-3xl sm:text-5xl font-display uppercase leading-tight">
+                More reasons to <span className="text-accent">stay focused.</span>
+              </h2>
+            </div>
+            <p className="max-w-2xl text-sm sm:text-base font-bold opacity-70 leading-relaxed">
+              The homepage now showcases the latest product loop: streaks, quests, battle mode, share cards, smart paths, and Pro insights.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {featureSpotlights.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ delay: index * 0.05 }}
+                className="neo-border-sm bg-bg p-5 flex flex-col gap-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-11 h-11 bg-primary text-ink neo-border-sm flex items-center justify-center">
+                    <feature.icon size={20} />
+                  </div>
+                  <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-1 neo-border-sm ${feature.plan === 'Pro' ? 'bg-accent text-bg' : 'bg-secondary text-ink'}`}>
+                    {feature.plan}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-display uppercase text-xl mb-2">{feature.title}</h3>
+                  <p className="text-sm font-bold opacity-70 leading-relaxed">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -149,6 +204,46 @@ export function PricingPage() {
             <p className="text-xs font-bold opacity-60 uppercase tracking-widest leading-relaxed">
               Stand out on the leaderboard with a verified Pro badge.
             </p>
+          </div>
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4 neo-card bg-ink text-bg p-6 sm:p-8">
+            <div className="inline-block bg-accent text-bg px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-4">
+              Free plan
+            </div>
+            <h3 className="font-display uppercase text-3xl mb-4">What everyone gets</h3>
+            <p className="text-sm font-bold opacity-70 leading-relaxed mb-6">
+              Core focus tools are free so anyone can build the habit before upgrading.
+            </p>
+            <ul className="space-y-3">
+              {['10 sessions per day', 'Battle mode duels', 'Daily streaks and quests', 'Shareable recap cards', 'Basic topics and leaderboard'].map((item) => (
+                <li key={item} className="flex items-center gap-3 text-sm font-bold uppercase tracking-tight">
+                  <Check size={16} className="text-primary shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="lg:col-span-8 neo-card bg-white p-6 sm:p-8">
+            <div className="inline-block bg-primary text-ink px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-4">
+              Pro plan
+            </div>
+            <h3 className="font-display uppercase text-3xl mb-4">What Pro unlocks</h3>
+            <p className="text-sm font-bold opacity-70 leading-relaxed mb-6 max-w-2xl">
+              Pro removes limits and adds the AI-powered features that turn exploration into personalized learning.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {['Unlimited sessions', 'AI Deep Insights on topics', 'Personalized knowledge paths', 'Access to all Pro topics', 'Custom focus ambience', 'Pro badge on leaderboard'].map((item) => (
+                <div key={item} className="neo-border-sm bg-secondary/10 p-4 flex items-center gap-3">
+                  <div className="w-6 h-6 bg-accent text-bg neo-border-sm flex items-center justify-center shrink-0">
+                    <Check size={14} />
+                  </div>
+                  <span className="text-sm font-bold uppercase tracking-tight">{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
