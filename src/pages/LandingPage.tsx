@@ -54,8 +54,8 @@ export function LandingPage() {
   return (
     <>
       <Helmet>
-        <title>unrot | Cure Brainrot & Reclaim Your Attention</title>
-        <meta name="description" content="Tired of endless doomscrolling? Unrot your brain. An anti-brainrot platform designed to cure digital fatigue, restore deep focus, and help you reclaim your attention span." />
+        <title>unrot | Focus App for Deep Work, Attention & Learning</title>
+        <meta name="description" content="Unrot is a focus app for deep work, attention span improvement, and structured learning. Explore curated rabbit holes, streaks, battle mode, and smart paths to reduce doomscrolling." />
         <link rel="canonical" href="https://unrot.space" />
       </Helmet>
       <div className="pt-20 sm:pt-24">
@@ -69,19 +69,18 @@ export function LandingPage() {
             className="max-w-3xl"
           >
             <div className="inline-block bg-accent text-bg px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-6">
-              The Ultimate Brainrot Cure
+              Focus app for deep work
             </div>
             <h1 className="text-4xl sm:text-6xl md:text-9xl leading-[0.85] md:leading-[0.8] font-display mb-6 sm:mb-8 uppercase">
-              UNROT YOUR <br />
-              <span className="text-primary bg-ink px-4 py-2 inline-block -rotate-2">BRAIN.</span>
+              RECLAIM YOUR <br />
+              <span className="text-primary bg-ink px-4 py-2 inline-block -rotate-2">ATTENTION.</span>
             </h1>
             <p className="text-base sm:text-lg md:text-2xl text-ink font-bold mb-6 leading-snug mx-auto max-w-2xl">
-              Endless doomscrolling is destroying your attention span. 
-              Cure your digital fatigue and reclaim your focus through curated rabbit holes.
+              Unrot helps you build a stronger <strong>attention span</strong> with curated rabbit holes, deep focus sessions, and a better way to learn online.
             </p>
             
             <p className="text-xs uppercase tracking-[0.2em] font-black text-accent mb-10 opacity-80">
-              Most people can’t focus for 10 minutes. Try.
+              Learn more. Doomscroll less. Think deeper.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full">
@@ -111,7 +110,7 @@ export function LandingPage() {
               New product features
             </div>
             <h2 className="text-3xl sm:text-5xl font-display uppercase leading-tight">
-              Built to make focus <span className="text-accent">stick.</span>
+              Built to make <span className="text-accent">deep work</span> stick.
             </h2>
           </div>
           <Link
@@ -159,24 +158,24 @@ export function LandingPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
           
           <div className="relative z-10">
-            <h2 className="text-3xl md:text-5xl font-display mb-8 sm:mb-12">How to cure brainrot.</h2>
+            <h2 className="text-3xl md:text-5xl font-display mb-8 sm:mb-12">How unrot improves focus and learning.</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 {
                   color: 'bg-primary',
                   title: "Initiate",
-                  desc: "Pick a topic. Set your intention. No more mindless swiping."
+                  desc: "Pick a topic, then read with intent instead of mindless swiping."
                 },
                 {
                   color: 'bg-secondary',
                   title: "Explore",
-                  desc: "Follow the threads. Each topic leads to another deeper layer."
+                  desc: "Follow the threads. Each topic leads to a deeper layer of knowledge."
                 },
                 {
                   color: 'bg-accent',
                   title: "Integrate",
-                  desc: "Finish with a map of your journey. Real knowledge, retained."
+                  desc: "Finish with a map of your journey and retain what you learned."
                 }
               ].map((step, i) => (
                 <div key={i} className="bg-white text-ink neo-border p-8">
@@ -213,8 +212,7 @@ export function LandingPage() {
               A product loop <span className="text-primary">built for retention.</span>
             </h2>
             <p className="text-sm sm:text-base font-bold leading-relaxed opacity-75 mb-6">
-              Every session now feeds the next one: streaks keep you coming back, battle mode keeps it fun,
-              share cards make it social, and Pro smart paths turn curiosity into a real learning plan.
+              Every session feeds the next one: streaks keep you coming back, battle mode makes learning social, share cards make it easy to post, and smart paths turn curiosity into a real learning plan.
             </p>
             <div className="flex flex-wrap gap-3">
               {['Streaks', 'Quests', 'Battle', 'Share', 'Smart Paths'].map((item) => (
@@ -287,13 +285,46 @@ export function LandingPage() {
           <div className="neo-card bg-ink text-bg p-6 sm:p-12 flex flex-col justify-center aspect-square md:aspect-auto md:h-full">
             <div className="text-5xl sm:text-6xl font-display text-primary mb-6">90%</div>
             <p className="text-lg sm:text-xl font-bold leading-tight uppercase tracking-tighter">
-              Of digital content is consumed mindlessly. Unrot is for the other 10%.
+              Of digital content is consumed mindlessly. Unrot is for people who want to learn on purpose.
             </p>
             <div className="mt-12 pt-12 border-t border-white/10">
               <p className="text-xs font-mono opacity-40">
                 Source: Attention Economy Research 2025
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 mb-16 sm:mb-24">
+        <div className="neo-card bg-white p-6 sm:p-10">
+          <div className="inline-block bg-secondary text-ink px-3 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-4">
+            FAQ
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-display uppercase leading-tight mb-8">
+            Common questions about <span className="text-accent">unrot</span>
+          </h2>
+          <div className="space-y-6">
+            {[
+              {
+                q: 'What is unrot?',
+                a: 'Unrot is a focus app and learning platform that helps you replace doomscrolling with curated rabbit holes, reading sessions, and better knowledge retention.',
+              },
+              {
+                q: 'How does unrot help with attention span?',
+                a: 'It turns passive scrolling into active reading, so you spend more time with deep work, structured topics, and less time bouncing between random feeds.',
+              },
+              {
+                q: 'Is unrot free?',
+                a: 'Yes. The core focus experience is free, including sessions, battle mode, streaks, quests, and basic topics.',
+              },
+            ].map((item) => (
+              <div key={item.q} className="bg-bg neo-border-sm p-4 sm:p-5">
+                <h3 className="font-display uppercase text-xl mb-2">{item.q}</h3>
+                <p className="text-sm sm:text-base font-bold leading-relaxed opacity-80">{item.a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -310,8 +341,7 @@ export function LandingPage() {
               <span className="bg-ink text-bg px-4 py-2 inline-block rotate-1">RECLAIM?</span>
             </h2>
             <p className="text-base sm:text-xl font-bold mb-8 sm:mb-12 max-w-2xl mx-auto">
-              Join thousands of thinkers who are choosing depth over doomscrolling. 
-              Your first rabbit hole is waiting.
+              Join people who want a better way to browse the internet: <strong>less doomscrolling, more depth, and better retention</strong>.
             </p>
             <button
               onClick={handleStartSession}
