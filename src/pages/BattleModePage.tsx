@@ -1,60 +1,63 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { useSession } from '../context/SessionContext';
 import { cn } from '../lib/utils';
-import { Loader2, Swords, Heart, Shield, Clock3, ChevronRight, RotateCcw, Trophy } from 'lucide-react';
+import { Loader2, Swords, Heart, Shield, Clock3, ChevronRight, RotateCcw, Trophy, Users, Link2 } from 'lucide-react';
+import {
+  BattleMatch,
+  BattleMatchRound,
+  BattleRoundAnswer,
+  BattleRoundResult,
+  BattleTopic,
+  createBattleMatch,
+  fetchBattleTopics,
+  generateRounds,
+  getBattleRounds,
+  getRoundAnswers,
+  getRoundResults,
+  insertMatchRounds,
+  joinBattleByCode,
+  startBattleMatch,
+  submitBattleAnswer,
+  subscribeToBattle,
+  unsubscribeBattle,
+} from '../services/battleService';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 type ModeKey = 'blitz' | 'duel' | 'deep';
 
-type BattleTopic = {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  is_pro?: boolean;
-};
+const ROUND_TIME_MS = 45000;
 
-type RoundResult = {
-  round: number;
-  playerScore: number;
-  botScore: number;
-  playerDamage: number;
-  botDamage: number;
-  correct: boolean;
-  answer: string;
-  correctAnswer: string;
-};
-
-const GAME_MODES: Record<ModeKey, { name: string; rounds: number; roundSeconds: number; botAccuracy: number }> = {
-  blitz: { name: 'Blitz Duel', rounds: 5, roundSeconds: 35, botAccuracy: 0.5 },
-  duel: { name: 'Standard Duel', rounds: 7, roundSeconds: 50, botAccuracy: 0.62 },
-  deep: { name: 'Deep Focus Duel', rounds: 9, roundSeconds: 65, botAccuracy: 0.7 },
+const GAME_MODES: Record<ModeKey, { name: string; rounds: number }> = {
+  blitz: { name: 'Blitz Duel', rounds: 5 },
+  duel: { name: 'Standard Duel', rounds: 7 },
+  deep: { name: 'Deep Focus Duel', rounds: 9 },
 };
 
 export function BattleModePage() {
   const navigate = useNavigate();
-  const { user, isPro } = useSession();
+  const { user, isPro, profile } = useSession();
 
   const [topics, setTopics] = useState<BattleTopic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [mode, setMode] = useState<ModeKey>('duel');
-  const [started, setStarted] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
+  const [inviteInput, setInviteInput] = useState('');
 
-  const [round, setRound] = useState(1);
-  const [playerHp, setPlayerHp] = useState(100);
-  const [botHp, setBotHp] = useState(100);
-  const [timeLeft, setTimeLeft] = useState(GAME_MODES.duel.roundSeconds);
+  const [match, setMatch] = useState<BattleMatch | null>(null);
+  const [rounds, setRounds] = useState<BattleMatchRound[]>([]);
+  const [roundAnswers, setRoundAnswers] = useState<BattleRoundAnswer[]>([]);
+  const [roundResults, setRoundResults] = useState<BattleRoundResult[]>([]);
 
-  const [currentTopic, setCurrentTopic] = useState<BattleTopic | null>(null);
-  const [options, setOptions] = useState<string[]>([]);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [roundResolved, setRoundResolved] = useState(false);
-  const [roundResults, setRoundResults] = useState<RoundResult[]>([]);
-  const [usedTopicIds, setUsedTopicIds] = useState<string[]>([]);
+  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [timeLeftMs, setTimeLeftMs] = useState(ROUND_TIME_MS);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const roundStartRef = useRef<number | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -64,18 +67,16 @@ export function BattleModePage() {
 
     async function fetchTopics() {
       setLoading(true);
+      setError(null);
       try {
-        const { data, error } = await supabase
-          .from('topics')
-          .select('id, title, description, category, is_pro')
-          .limit(300);
-
-        if (!error && data) {
-          const filtered = (data as BattleTopic[]).filter((topic) => !topic.is_pro || isPro);
-          setTopics(filtered);
+        const data = await fetchBattleTopics(isPro);
+        setTopics(data);
+        if (data.length > 0) {
+          setSelectedTopicId(data[0].id);
         }
       } catch (error) {
         console.error('Battle mode topic fetch failed:', error);
+        setError('Could not load topics for battle mode.');
       } finally {
         setLoading(false);
       }
@@ -84,118 +85,262 @@ export function BattleModePage() {
     fetchTopics();
   }, [user, navigate, isPro]);
 
-  const categories = useMemo(() => {
-    return Array.from(new Set(topics.map((topic) => topic.category))).filter(Boolean);
-  }, [topics]);
+  const myUserId = user?.id || '';
+  const isHost = !!match && match.host_user_id === myUserId;
+  const hasGuest = !!match?.guest_user_id;
+  const inMatch = !!match;
+  const isActive = match?.status === 'active';
+  const isFinished = match?.status === 'finished';
 
-  const remainingTopics = useMemo(() => {
-    const used = new Set(usedTopicIds);
-    const available = topics.filter((topic) => !used.has(topic.id));
-    return available.length > 0 ? available : topics;
-  }, [topics, usedTopicIds]);
+  const myHp = useMemo(() => {
+    if (!match) return 100;
+    return isHost ? match.host_hp : match.guest_hp;
+  }, [match, isHost]);
 
-  const initializeRound = () => {
-    if (remainingTopics.length === 0) return;
-    const randomTopic = remainingTopics[Math.floor(Math.random() * remainingTopics.length)];
-    setCurrentTopic(randomTopic);
+  const enemyHp = useMemo(() => {
+    if (!match) return 100;
+    return isHost ? match.guest_hp : match.host_hp;
+  }, [match, isHost]);
 
-    const distractors = categories
-      .filter((category) => category !== randomTopic.category)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
+  const currentRound = useMemo(() => {
+    if (!match) return null;
+    return rounds.find((item) => item.round_number === match.current_round) || null;
+  }, [rounds, match]);
 
-    const answerOptions = [randomTopic.category, ...distractors].sort(() => Math.random() - 0.5);
+  const hasAnsweredCurrentRound = useMemo(() => {
+    if (!match) return false;
+    return roundAnswers.some(
+      (answer) =>
+        answer.round_number === match.current_round &&
+        answer.user_id === myUserId
+    );
+  }, [roundAnswers, match, myUserId]);
 
-    setOptions(answerOptions);
-    setSelectedAnswer(null);
-    setRoundResolved(false);
-    setTimeLeft(GAME_MODES[mode].roundSeconds);
-    setUsedTopicIds((prev) => [...prev, randomTopic.id]);
-  };
+  const myLatestRoundResult = useMemo(() => {
+    if (!match || !roundResults.length) return null;
+    const targetRound = Math.max(1, match.current_round - 1);
+    const result = roundResults.find((item) => item.round_number === targetRound);
+    if (!result) return null;
+
+    return isHost
+      ? {
+          dealt: result.guest_damage,
+          taken: result.host_damage,
+          myScore: result.host_score,
+          enemyScore: result.guest_score,
+        }
+      : {
+          dealt: result.host_damage,
+          taken: result.guest_damage,
+          myScore: result.guest_score,
+          enemyScore: result.host_score,
+        };
+  }, [match, roundResults, isHost]);
 
   useEffect(() => {
-    if (!started || finished) return;
-    initializeRound();
-  }, [started, mode]);
+    if (!match?.id) return;
+
+    let cancelled = false;
+
+    async function loadMatchData() {
+      try {
+        const [loadedRounds, loadedResults, loadedAnswers] = await Promise.all([
+          getBattleRounds(match.id),
+          getRoundResults(match.id),
+          getRoundAnswers(match.id, match.current_round),
+        ]);
+
+        if (cancelled) return;
+        setRounds(loadedRounds);
+        setRoundResults(loadedResults);
+        setRoundAnswers(loadedAnswers);
+      } catch (err) {
+        console.error('Failed loading match data:', err);
+      }
+    }
+
+    loadMatchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [match?.id]);
 
   useEffect(() => {
-    if (!started || finished || roundResolved) return;
+    if (!match?.id) return;
 
-    if (timeLeft <= 0) {
-      resolveRound(null);
+    unsubscribeBattle(channelRef.current);
+    channelRef.current = subscribeToBattle(match.id, {
+      onMatchUpdate: (nextMatch) => {
+        setMatch(nextMatch);
+      },
+      onAnswer: (answer) => {
+        setRoundAnswers((prev) => {
+          const exists = prev.some(
+            (item) => item.match_id === answer.match_id && item.round_number === answer.round_number && item.user_id === answer.user_id
+          );
+          if (exists) return prev;
+          return [...prev, answer];
+        });
+      },
+      onRoundResult: (result) => {
+        setRoundResults((prev) => {
+          const exists = prev.some(
+            (item) => item.match_id === result.match_id && item.round_number === result.round_number
+          );
+          if (exists) return prev;
+          return [...prev, result];
+        });
+      },
+    });
+
+    return () => {
+      unsubscribeBattle(channelRef.current);
+      channelRef.current = null;
+    };
+  }, [match?.id]);
+
+  useEffect(() => {
+    if (!match?.id || !isActive) return;
+
+    getRoundAnswers(match.id, match.current_round)
+      .then((answers) => setRoundAnswers((prev) => {
+        const copy = [...prev];
+        for (const answer of answers) {
+          const exists = copy.some(
+            (item) => item.match_id === answer.match_id && item.round_number === answer.round_number && item.user_id === answer.user_id
+          );
+          if (!exists) copy.push(answer);
+        }
+        return copy;
+      }))
+      .catch((err) => console.error('Failed to load round answers:', err));
+  }, [match?.id, match?.current_round, isActive]);
+
+  useEffect(() => {
+    if (!isActive || !match?.round_started_at) {
+      setTimeLeftMs(ROUND_TIME_MS);
       return;
     }
 
-    const timer = window.setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [timeLeft, started, finished, roundResolved]);
+    const startedAt = new Date(match.round_started_at).getTime();
+    roundStartRef.current = startedAt;
 
-  const resolveRound = (answer: string | null) => {
-    if (!currentTopic || roundResolved) return;
+    const timer = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, ROUND_TIME_MS - elapsed);
+      setTimeLeftMs(remaining);
 
-    const isCorrect = answer === currentTopic.category;
-    const modeConfig = GAME_MODES[mode];
+      if (remaining <= 0 && !hasAnsweredCurrentRound && !isSubmitting) {
+        handleSubmitAnswer('');
+      }
+    }, 200);
 
-    const playerScore = isCorrect ? Math.max(8, 25 + timeLeft * 2) : Math.max(0, 4 + Math.floor(timeLeft / 5));
+    return () => clearInterval(timer);
+  }, [isActive, match?.round_started_at, hasAnsweredCurrentRound, isSubmitting]);
 
-    const botCorrect = Math.random() < modeConfig.botAccuracy;
-    const botTimeLeft = Math.floor(Math.random() * modeConfig.roundSeconds);
-    const botScore = botCorrect ? Math.max(8, 20 + botTimeLeft * 2) : Math.max(0, 3 + Math.floor(botTimeLeft / 6));
+  useEffect(() => {
+    if (!isActive) {
+      setSelectedAnswer('');
+      return;
+    }
+    setSelectedAnswer('');
+  }, [match?.current_round, isActive]);
 
-    const botDamage = Math.max(0, playerScore - botScore);
-    const playerDamage = Math.max(0, botScore - playerScore);
+  const handleCreateMatch = async () => {
+    if (!selectedTopicId) return;
 
-    const nextPlayerHp = Math.max(0, playerHp - playerDamage);
-    const nextBotHp = Math.max(0, botHp - botDamage);
+    setError(null);
+    try {
+      const createdMatch = await createBattleMatch(selectedTopicId, GAME_MODES[mode].rounds);
+      const generatedRounds = generateRounds({ topics, seedTopicId: selectedTopicId, rounds: GAME_MODES[mode].rounds });
+      await insertMatchRounds(createdMatch.id, generatedRounds);
 
-    setPlayerHp(nextPlayerHp);
-    setBotHp(nextBotHp);
+      setRounds(generatedRounds.map((item) => ({ ...item, match_id: createdMatch.id })));
+      setRoundAnswers([]);
+      setRoundResults([]);
+      setMatch(createdMatch);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Could not create battle room.');
+    }
+  };
 
-    setRoundResults((prev) => [
-      ...prev,
-      {
-        round,
-        playerScore,
-        botScore,
-        playerDamage,
-        botDamage,
-        correct: isCorrect,
-        answer: answer || 'No answer',
-        correctAnswer: currentTopic.category,
-      },
-    ]);
+  const handleJoinMatch = async () => {
+    if (!inviteInput.trim()) return;
+
+    setError(null);
+    try {
+      const joined = await joinBattleByCode(inviteInput.trim().toUpperCase());
+      const loadedRounds = await getBattleRounds(joined.id);
+      const loadedResults = await getRoundResults(joined.id);
+
+      setMatch(joined);
+      setRounds(loadedRounds);
+      setRoundResults(loadedResults);
+      setRoundAnswers([]);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Could not join battle room.');
+    }
+  };
+
+  const handleStartMatch = async () => {
+    if (!match) return;
+
+    setError(null);
+    try {
+      const started = await startBattleMatch(match.id);
+      setMatch(started);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Could not start match.');
+    }
+  };
+
+  const handleSubmitAnswer = async (answer: string) => {
+    if (!match || !currentRound || hasAnsweredCurrentRound || isSubmitting) return;
 
     setSelectedAnswer(answer);
-    setRoundResolved(true);
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const startedAt = roundStartRef.current || Date.now();
+      const responseMs = Math.max(0, Date.now() - startedAt);
 
-    const shouldFinish = round >= modeConfig.rounds || nextPlayerHp <= 0 || nextBotHp <= 0;
+      const nextMatch = await submitBattleAnswer({
+        matchId: match.id,
+        roundNumber: currentRound.round_number,
+        selectedAnswer: answer,
+        responseMs,
+      });
 
-    window.setTimeout(() => {
-      if (shouldFinish) {
-        setFinished(true);
-        return;
-      }
-
-      setRound((prev) => prev + 1);
-      initializeRound();
-    }, 1700);
+      setMatch(nextMatch);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Could not submit answer.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const startBattle = () => {
-    setStarted(true);
-    setFinished(false);
-    setRound(1);
-    setPlayerHp(100);
-    setBotHp(100);
+  const handleLeaveMatch = () => {
+    unsubscribeBattle(channelRef.current);
+    channelRef.current = null;
+    setMatch(null);
+    setRounds([]);
+    setRoundAnswers([]);
     setRoundResults([]);
-    setUsedTopicIds([]);
-    setCurrentTopic(null);
-    setSelectedAnswer(null);
-    setRoundResolved(false);
-    setTimeLeft(GAME_MODES[mode].roundSeconds);
+    setSelectedAnswer('');
+    setInviteInput('');
+    setTimeLeftMs(ROUND_TIME_MS);
   };
 
-  const winner = playerHp === botHp ? 'draw' : playerHp > botHp ? 'player' : 'bot';
+  const winnerText = useMemo(() => {
+    if (!match || !isFinished) return '';
+    if (!match.winner_user_id) return 'Draw';
+    return match.winner_user_id === myUserId ? 'Victory' : 'Defeat';
+  }, [match, isFinished, myUserId]);
 
   if (loading) {
     return (
@@ -212,16 +357,16 @@ export function BattleModePage() {
       </Helmet>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-8 sm:pb-10">
-        {!started ? (
+        {!inMatch ? (
           <div className="space-y-8 min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-9rem)] flex flex-col justify-center">
             <div className="text-center">
               <div className="inline-flex items-center gap-2 bg-accent text-bg px-4 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-6">
                 <Swords size={14} />
-                New Game Mode
+                Friend PvP Mode
               </div>
-              <h1 className="text-4xl sm:text-6xl md:text-7xl font-display uppercase leading-[0.85] mb-4">Focus Battle Duels</h1>
+              <h1 className="text-4xl sm:text-6xl md:text-7xl font-display uppercase leading-[0.85] mb-4">Read. Answer. Fight Live.</h1>
               <p className="text-sm sm:text-lg font-bold opacity-70 max-w-2xl mx-auto">
-                Geoguessr-style head-to-head rounds. Read fast, classify correctly, and destroy your rival HP bar.
+                No bots. No AI. You and a friend read the same passage and race to answer correctly.
               </p>
             </div>
 
@@ -241,21 +386,60 @@ export function BattleModePage() {
                     <div className="text-[10px] uppercase tracking-widest font-black opacity-50 mb-2">{modeKey}</div>
                     <h3 className="font-display text-2xl uppercase mb-3">{item.name}</h3>
                     <div className="text-xs font-bold uppercase opacity-70">Rounds: {item.rounds}</div>
-                    <div className="text-xs font-bold uppercase opacity-70">Timer: {item.roundSeconds}s</div>
+                    <div className="text-xs font-bold uppercase opacity-70">Read + answer timer: 45s</div>
                   </button>
                 );
               })}
             </div>
 
-            <div className="flex justify-center">
-              <button
-                onClick={startBattle}
-                className="neo-button bg-primary text-ink px-10 py-4 text-lg font-display uppercase flex items-center gap-3"
+            <div className="neo-card bg-white text-ink p-5 space-y-4">
+              <div className="text-[10px] uppercase tracking-widest font-black opacity-50">Topic to read</div>
+              <select
+                value={selectedTopicId}
+                onChange={(event) => setSelectedTopicId(event.target.value)}
+                className="w-full neo-border-sm px-3 py-3 font-bold"
               >
-                <Swords size={20} />
-                Start Duel
-              </button>
+                {topics.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.title} · {topic.category}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="neo-card bg-white text-ink p-5 space-y-4">
+                <div className="text-[10px] uppercase tracking-widest font-black opacity-50">Host a room</div>
+                <button
+                  onClick={handleCreateMatch}
+                  disabled={!selectedTopicId}
+                  className="neo-button bg-primary text-ink px-6 py-3 text-sm uppercase font-black flex items-center gap-2"
+                >
+                  <Users size={16} />
+                  Create battle room
+                </button>
+              </div>
+
+              <div className="neo-card bg-white text-ink p-5 space-y-4">
+                <div className="text-[10px] uppercase tracking-widest font-black opacity-50">Join friend</div>
+                <div className="flex gap-2">
+                  <input
+                    value={inviteInput}
+                    onChange={(event) => setInviteInput(event.target.value.toUpperCase())}
+                    placeholder="Enter code"
+                    className="flex-1 neo-border-sm px-3 py-3 font-black uppercase tracking-widest"
+                  />
+                  <button
+                    onClick={handleJoinMatch}
+                    className="neo-button bg-secondary text-ink px-5 py-3 text-xs uppercase font-black"
+                  >
+                    Join
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {error && <p className="text-center text-xs font-black uppercase tracking-widest text-accent">{error}</p>}
           </div>
         ) : (
           <div className="space-y-6">
@@ -266,54 +450,88 @@ export function BattleModePage() {
                   <Heart size={14} className="text-accent" />
                 </div>
                 <div className="h-3 bg-ink/10 neo-border-sm overflow-hidden">
-                  <div className="h-full bg-accent transition-all" style={{ width: `${playerHp}%` }} />
+                  <div className="h-full bg-accent transition-all" style={{ width: `${myHp}%` }} />
                 </div>
-                <div className="mt-2 text-xs font-black uppercase">HP {playerHp}</div>
+                <div className="mt-2 text-xs font-black uppercase">HP {myHp}</div>
               </div>
 
               <div className="text-center">
-                <div className="text-[10px] uppercase tracking-widest font-black opacity-60">Round {round} / {GAME_MODES[mode].rounds}</div>
+                <div className="text-[10px] uppercase tracking-widest font-black opacity-60">
+                  {match.status === 'waiting'
+                    ? 'Waiting room'
+                    : `Round ${Math.min(match.current_round, match.max_rounds)} / ${match.max_rounds}`}
+                </div>
                 <div className="text-3xl font-display uppercase mt-1">{GAME_MODES[mode].name}</div>
+                <div className="text-[10px] uppercase tracking-widest font-black opacity-50 mt-2 inline-flex items-center gap-2">
+                  <Link2 size={12} />
+                  Code {match.invite_code}
+                </div>
               </div>
 
               <div className="neo-card bg-white text-ink p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] uppercase tracking-widest font-black opacity-40">Rival Bot</span>
+                  <span className="text-[10px] uppercase tracking-widest font-black opacity-40">Your friend</span>
                   <Shield size={14} className="text-secondary" />
                 </div>
                 <div className="h-3 bg-ink/10 neo-border-sm overflow-hidden">
-                  <div className="h-full bg-secondary transition-all" style={{ width: `${botHp}%` }} />
+                  <div className="h-full bg-secondary transition-all" style={{ width: `${enemyHp}%` }} />
                 </div>
-                <div className="mt-2 text-xs font-black uppercase">HP {botHp}</div>
+                <div className="mt-2 text-xs font-black uppercase">HP {enemyHp}</div>
               </div>
             </div>
 
-            {!finished && currentTopic && (
+            {match.status === 'waiting' && (
+              <div className="neo-border-lg bg-white text-ink p-6 sm:p-7 text-center space-y-5">
+                <div className="text-[10px] uppercase tracking-widest font-black opacity-50">Invite a friend to this room</div>
+                <div className="text-4xl font-display uppercase">{match.invite_code}</div>
+                <p className="text-xs font-bold uppercase tracking-widest opacity-60">
+                  {hasGuest ? 'Friend joined. Ready to start.' : 'Waiting for your friend to join...'}
+                </p>
+
+                {isHost ? (
+                  <button
+                    onClick={handleStartMatch}
+                    disabled={!hasGuest}
+                    className="neo-button bg-primary text-ink px-8 py-3 text-sm uppercase font-black disabled:opacity-50"
+                  >
+                    Start live battle
+                  </button>
+                ) : (
+                  <p className="text-xs font-black uppercase tracking-widest">Host will start the match.</p>
+                )}
+              </div>
+            )}
+
+            {isActive && currentRound && (
               <div className="neo-border-lg bg-white text-ink p-5 sm:p-7">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div className="text-[10px] uppercase tracking-widest font-black opacity-40">Classify this topic fast</div>
+                  <div className="text-[10px] uppercase tracking-widest font-black opacity-40">Read the passage then answer fast</div>
                   <div className="inline-flex items-center gap-2 bg-ink text-bg px-3 py-1 neo-border-sm text-xs font-black uppercase">
                     <Clock3 size={14} />
-                    {timeLeft}s
+                    {Math.ceil(timeLeftMs / 1000)}s
                   </div>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-display uppercase mb-3">{currentTopic.title}</h2>
-                <p className="text-sm sm:text-base font-bold opacity-80 mb-6 leading-relaxed">{currentTopic.description}</p>
+                <div className="bg-bg neo-border-sm p-4 mb-5">
+                  <h2 className="text-xl sm:text-2xl font-display uppercase mb-3">Passage</h2>
+                  <p className="text-sm sm:text-base font-bold opacity-85 leading-relaxed whitespace-pre-wrap">{currentRound.passage}</p>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-display uppercase mb-3">{currentRound.question}</h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {options.map((option) => {
+                  {currentRound.options.map((option) => {
                     const isSelected = selectedAnswer === option;
-                    const isCorrect = roundResolved && option === currentTopic.category;
+                    const isCorrect = hasAnsweredCurrentRound && option === currentRound.correct_answer;
 
                     return (
                       <button
                         key={option}
-                        disabled={roundResolved}
-                        onClick={() => resolveRound(option)}
+                        disabled={hasAnsweredCurrentRound || isSubmitting}
+                        onClick={() => handleSubmitAnswer(option)}
                         className={cn(
                           'neo-border-sm px-4 py-3 text-left font-black uppercase text-xs tracking-widest transition-all',
-                          roundResolved
+                          hasAnsweredCurrentRound
                             ? isCorrect
                               ? 'bg-primary text-ink'
                               : isSelected
@@ -327,40 +545,57 @@ export function BattleModePage() {
                     );
                   })}
                 </div>
+
+                {hasAnsweredCurrentRound && (
+                  <p className="mt-4 text-xs font-black uppercase tracking-widest opacity-70">Answer locked. Waiting for friend...</p>
+                )}
+
+                {myLatestRoundResult && (
+                  <div className="mt-4 bg-bg neo-border-sm px-3 py-2 text-xs font-black uppercase tracking-widest">
+                    Score {myLatestRoundResult.myScore} vs {myLatestRoundResult.enemyScore} · You dealt {myLatestRoundResult.dealt} · You took {myLatestRoundResult.taken}
+                  </div>
+                )}
               </div>
             )}
 
-            {finished && (
+            {isFinished && (
               <div className="neo-border-lg bg-white text-ink p-6 sm:p-8 text-center">
                 <div className="inline-flex items-center gap-2 bg-primary text-ink px-4 py-1 neo-border-sm text-[10px] uppercase font-black tracking-widest mb-5">
                   <Trophy size={14} />
-                  Duel Ended
+                  Live Match Ended
                 </div>
                 <h3 className="text-4xl sm:text-5xl font-display uppercase mb-3">
-                  {winner === 'draw' ? 'Draw' : winner === 'player' ? 'Victory' : 'Defeat'}
+                  {winnerText}
                 </h3>
-                <p className="text-sm font-bold uppercase opacity-60 tracking-widest mb-6">Final HP · You {playerHp} — {botHp} Rival</p>
+                <p className="text-sm font-bold uppercase opacity-60 tracking-widest mb-6">Final HP · You {myHp} — {enemyHp} Rival</p>
 
                 <div className="max-w-xl mx-auto space-y-2 mb-7 text-left">
-                  {roundResults.slice(-5).map((result) => (
-                    <div key={result.round} className="flex items-center justify-between bg-bg px-3 py-2 neo-border-sm text-xs font-bold">
-                      <span>Round {result.round}: {result.correct ? 'Correct' : 'Wrong'}</span>
+                  {roundResults.slice(-5).map((result) => {
+                    const dealt = isHost ? result.guest_damage : result.host_damage;
+                    const taken = isHost ? result.host_damage : result.guest_damage;
+                    const myScoreText = isHost ? result.host_score : result.guest_score;
+                    const enemyScoreText = isHost ? result.guest_score : result.host_score;
+
+                    return (
+                    <div key={result.round_number} className="flex items-center justify-between bg-bg px-3 py-2 neo-border-sm text-xs font-bold">
+                      <span>Round {result.round_number}</span>
                       <span>
-                        You {result.playerScore} · Rival {result.botScore}
-                        {result.botDamage > 0 && ` · +${result.botDamage} dmg`}
-                        {result.playerDamage > 0 && ` · -${result.playerDamage} dmg`}
+                        You {myScoreText} · Rival {enemyScoreText}
+                        {dealt > 0 && ` · +${dealt} dmg`}
+                        {taken > 0 && ` · -${taken} dmg`}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-center gap-3">
                   <button
-                    onClick={startBattle}
+                    onClick={handleLeaveMatch}
                     className="neo-button bg-primary text-ink px-8 py-3 text-sm uppercase font-black flex items-center justify-center gap-2"
                   >
                     <RotateCcw size={16} />
-                    Rematch
+                    New Match
                   </button>
                   <button
                     onClick={() => navigate('/explore')}
@@ -372,6 +607,21 @@ export function BattleModePage() {
                 </div>
               </div>
             )}
+
+            {!isFinished && (
+              <div className="flex justify-center">
+                <button
+                  onClick={handleLeaveMatch}
+                  className="neo-button bg-white text-ink px-8 py-3 text-sm uppercase font-black flex items-center justify-center gap-2"
+                >
+                  Leave Match
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {error && <p className="text-center text-xs font-black uppercase tracking-widest text-accent">{error}</p>}
+            {!profile && <p className="text-center text-[10px] font-black uppercase tracking-widest opacity-50">Sign in profile is required for live battle mode.</p>}
           </div>
         )}
       </div>

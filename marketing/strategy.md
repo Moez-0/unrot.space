@@ -155,7 +155,7 @@ Post only where your angle fits and always check the rules first:
 - r/InternetIsBeautiful — only if the product is genuinely delightful and the rules allow it
 
 #### Title bank by subreddit
-- r/SideProject: I built an anti-doomscroll app that turns rabbit holes into focus sessions
+- r/SideProject:  
 - r/indiehackers: I’m building unrot in public: an anti-brainrot product for people who still want depth
 - r/startups: What I’m learning building a focus-first product in a world designed for distraction
 - r/Productivity: I replaced doomscrolling with curated rabbit holes and it changed my focus
