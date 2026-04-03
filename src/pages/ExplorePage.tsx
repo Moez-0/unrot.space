@@ -22,6 +22,21 @@ export function ExplorePage() {
   const [isGeneratingPath, setIsGeneratingPath] = useState(false);
   const [smartPath, setSmartPath] = useState<{ pathTitle: string; reason: string; topicIds: string[] } | null>(null);
 
+  const getCategoryRank = (category: string) => {
+    const normalized = category.trim().toLowerCase();
+    if (normalized === 'science') return 0;
+    if (normalized === 'physics') return 1;
+    return 2;
+  };
+
+  const sortCategories = (input: string[]) => {
+    return [...input].sort((a, b) => {
+      const rankDiff = getCategoryRank(a) - getCategoryRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return a.localeCompare(b);
+    });
+  };
+
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true';
     const token = searchParams.get('customer_session_token');
@@ -88,9 +103,9 @@ export function ExplorePage() {
     }
   };
 
-  const categories = useMemo(() => 
-    Array.from(new Set(topics.map(t => t.category))).sort()
-  , [topics]);
+  const categories = useMemo(() => {
+    return sortCategories(Array.from(new Set(topics.map((topic) => topic.category))));
+  }, [topics]);
 
   const topicById = useMemo(() => {
     const map = new Map<string, any>();
@@ -113,7 +128,7 @@ export function ExplorePage() {
 
   const filteredCategories = useMemo(() => {
     if (selectedCategory) return [selectedCategory];
-    return Array.from(new Set(filteredTopics.map(t => t.category))).sort();
+    return sortCategories(Array.from(new Set(filteredTopics.map((topic) => topic.category))));
   }, [filteredTopics, selectedCategory]);
 
   const handleGeneratePath = async () => {
