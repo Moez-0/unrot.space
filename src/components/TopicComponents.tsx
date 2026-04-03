@@ -37,6 +37,17 @@ export function TopicCard({ topic, className }: { topic: any; className?: string
     'Productivity': 'bg-green-400'
   };
 
+  const titleWords = String(topic.title || '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(' ')
+    .toUpperCase();
+
+  const imageUrl = String(topic.image_url || '').trim();
+  const isLoremFlickrImage = imageUrl.toLowerCase().includes('loremflickr');
+  const showImage = Boolean(imageUrl) && !isLoremFlickrImage;
+
   return (
     <div
       className={cn(
@@ -49,14 +60,22 @@ export function TopicCard({ topic, className }: { topic: any; className?: string
           Pro
         </div>
       )}
-      {topic.image_url && (
+      {showImage ? (
         <div className="mb-4 neo-border overflow-hidden aspect-video bg-ink">
-          <img 
-            src={topic.image_url} 
-            alt={topic.title} 
+          <img
+            src={imageUrl}
+            alt={topic.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             referrerPolicy="no-referrer"
           />
+        </div>
+      ) : (
+        <div className="mb-4 neo-border overflow-hidden aspect-video bg-ink text-bg flex items-center justify-center p-4 relative">
+          <div className="absolute inset-0 opacity-20 bg-bg/10" />
+          <div className="relative text-center">
+            <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70 mb-2">Illustration</div>
+            <div className="font-display text-lg sm:text-xl leading-tight uppercase">{titleWords}</div>
+          </div>
         </div>
       )}
       <span className={cn(
