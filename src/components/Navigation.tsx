@@ -16,6 +16,7 @@ export function Navbar() {
   const navLinks = [
     { name: 'Leaderboard', path: '/leaderboard' },
     { name: 'Battle', path: '/battle' },
+    { name: 'Confessions', path: '/confessions' },
     ...(showPricing ? [{ name: 'Pricing', path: '/pricing' }] : []),
     { name: 'About', path: '/about' },
   ];
@@ -206,7 +207,7 @@ export function Footer() {
         </div>
         
         <div className="flex gap-6">
-          {['About', 'Privacy', 'Contact'].map((item) => (
+          {['About', 'Confessions', 'Privacy', 'Contact'].map((item) => (
             <Link 
               key={item} 
               to={`/${item.toLowerCase()}`} 

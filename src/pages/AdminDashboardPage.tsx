@@ -10,18 +10,27 @@ import {
 import { 
   LayoutDashboard, BookOpen, Users, TrendingUp, Plus, Edit2, Trash2, 
   X, Save, Loader2, LogOut, Search,
-  Image as ImageIcon, Crown, Menu, Clock, Target
+  Image as ImageIcon, Crown, Menu, Clock, Target, Check, Flag
 } from 'lucide-react';
 import { cn, formatTime } from '../lib/utils';
 
-type AdminTab = 'overview' | 'topics' | 'sessions' | 'users';
+type AdminTab = 'overview' | 'topics' | 'sessions' | 'users' | 'confessions';
 
 type AdminUser = Profile;
+
+type AdminConfession = {
+  id: string;
+  confession_text: string;
+  is_approved: boolean;
+  is_flagged: boolean;
+  created_at: string;
+};
 
 export function AdminDashboardPage() {
   const [topics, setTopics] = useState<SupabaseTopic[]>([]);
   const [sessions, setSessions] = useState<SupabaseSession[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [confessions, setConfessions] = useState<AdminConfession[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [editingTopic, setEditingTopic] = useState<Partial<SupabaseTopic> | null>(null);
@@ -34,9 +43,11 @@ export function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionSearch, setSessionSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  const [confessionSearch, setConfessionSearch] = useState('');
   const [topicsPage, setTopicsPage] = useState(1);
   const [sessionsPage, setSessionsPage] = useState(1);
   const [usersPage, setUsersPage] = useState(1);
+  const [confessionsPage, setConfessionsPage] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -68,19 +79,67 @@ export function AdminDashboardPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [topicsRes, sessionsRes, usersRes] = await Promise.all([
+      const [topicsRes, sessionsRes, usersRes, confessionsRes] = await Promise.all([
         supabase.from('topics').select('*').order('created_at', { ascending: false }),
         supabase.from('sessions').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*').order('total_score', { ascending: false })
+        supabase.from('profiles').select('*').order('total_score', { ascending: false }),
+        supabase.from('confessions').select('*').order('created_at', { ascending: false })
       ]);
 
       if (topicsRes.data) setTopics(topicsRes.data);
       if (sessionsRes.data) setSessions(sessionsRes.data);
       if (usersRes.data) setUsers(usersRes.data as AdminUser[]);
+      if (confessionsRes.data) setConfessions(confessionsRes.data as AdminConfession[]);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveConfession = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('confessions')
+        .update({ is_approved: true, is_flagged: false })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setConfessions((prev) => prev.map((row) => (
+        row.id === id ? { ...row, is_approved: true, is_flagged: false } : row
+      )));
+    } catch (err) {
+      alert('Error approving confession. Please try again.');
+    }
+  };
+
+  const handleFlagConfession = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('confessions')
+        .update({ is_approved: false, is_flagged: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setConfessions((prev) => prev.map((row) => (
+        row.id === id ? { ...row, is_approved: false, is_flagged: true } : row
+      )));
+    } catch (err) {
+      alert('Error flagging confession. Please try again.');
+    }
+  };
+
+  const handleDeleteConfession = async (id: string) => {
+    if (!window.confirm('Delete this confession permanently?')) return;
+
+    try {
+      const { error } = await supabase.from('confessions').delete().eq('id', id);
+      if (error) throw error;
+      setConfessions((prev) => prev.filter((row) => row.id !== id));
+    } catch (err) {
+      alert('Error deleting confession. Please try again.');
     }
   };
 
@@ -296,11 +355,22 @@ export function AdminDashboardPage() {
     (u.subscription_tier || '').toLowerCase().includes(userSearch.toLowerCase())
   );
 
+  const filteredConfessions = confessions.filter((confession) => {
+    const query = confessionSearch.toLowerCase();
+    return (
+      confession.confession_text.toLowerCase().includes(query)
+      || confession.id.toLowerCase().includes(query)
+      || (confession.is_approved ? 'approved' : 'pending').includes(query)
+      || (confession.is_flagged ? 'flagged' : 'clean').includes(query)
+    );
+  });
+
   const navItems: { key: AdminTab; label: string; icon: any }[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'topics', label: 'Topics', icon: BookOpen },
     { key: 'sessions', label: 'Sessions', icon: Clock },
     { key: 'users', label: 'Users', icon: Users },
+    { key: 'confessions', label: 'Confessions', icon: Flag },
   ];
 
   const pieColors = ['#FFD600', '#00E0FF', '#FF4D00', '#1A1A1A', '#9CA3AF', '#84CC16'];
@@ -308,14 +378,17 @@ export function AdminDashboardPage() {
   const topicsPageSize = 10;
   const sessionsPageSize = 10;
   const usersPageSize = 10;
+  const confessionsPageSize = 10;
 
   const totalTopicsPages = Math.max(1, Math.ceil(filteredTopics.length / topicsPageSize));
   const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / sessionsPageSize));
   const totalUsersPages = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize));
+  const totalConfessionsPages = Math.max(1, Math.ceil(filteredConfessions.length / confessionsPageSize));
 
   const paginatedTopics = filteredTopics.slice((topicsPage - 1) * topicsPageSize, topicsPage * topicsPageSize);
   const paginatedSessions = filteredSessions.slice((sessionsPage - 1) * sessionsPageSize, sessionsPage * sessionsPageSize);
   const paginatedUsers = filteredUsers.slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize);
+  const paginatedConfessions = filteredConfessions.slice((confessionsPage - 1) * confessionsPageSize, confessionsPage * confessionsPageSize);
 
   useEffect(() => {
     setTopicsPage(1);
@@ -330,6 +403,10 @@ export function AdminDashboardPage() {
   }, [userSearch]);
 
   useEffect(() => {
+    setConfessionsPage(1);
+  }, [confessionSearch]);
+
+  useEffect(() => {
     if (topicsPage > totalTopicsPages) setTopicsPage(totalTopicsPages);
   }, [topicsPage, totalTopicsPages]);
 
@@ -340,6 +417,10 @@ export function AdminDashboardPage() {
   useEffect(() => {
     if (usersPage > totalUsersPages) setUsersPage(totalUsersPages);
   }, [usersPage, totalUsersPages]);
+
+  useEffect(() => {
+    if (confessionsPage > totalConfessionsPages) setConfessionsPage(totalConfessionsPages);
+  }, [confessionsPage, totalConfessionsPages]);
 
   if (loading) {
     return (
@@ -1026,6 +1107,123 @@ export function AdminDashboardPage() {
                     <button
                       onClick={() => setUsersPage((p) => Math.min(totalUsersPages, p + 1))}
                       disabled={usersPage === totalUsersPages}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'confessions' && (
+            <motion.div
+              key="confessions"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                <div>
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display uppercase tracking-tight mb-2">Moderate <span className="text-accent">Confessions.</span></h2>
+                  <p className="font-bold opacity-60 uppercase text-xs tracking-widest">Approve pending posts before they appear publicly</p>
+                </div>
+              </div>
+
+              <div className="relative flex-grow max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search by content, id, or status..."
+                  value={confessionSearch}
+                  onChange={(e) => setConfessionSearch(e.target.value)}
+                  className="w-full bg-white neo-border px-12 py-3 font-bold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+
+              <div className="neo-card bg-white p-0 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1100px] text-left">
+                    <thead className="bg-ink text-bg">
+                      <tr>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Confession</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Status</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black">Created</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-black text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink/5">
+                      {paginatedConfessions.map((confession) => (
+                        <tr key={confession.id} className="hover:bg-ink/5 transition-colors">
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-bold leading-relaxed max-w-2xl">{confession.confession_text}</p>
+                            <p className="text-[10px] opacity-40 font-mono mt-1">{confession.id}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-2">
+                              <span className={cn(
+                                'text-[10px] font-black uppercase px-2 py-1 neo-border-sm',
+                                confession.is_approved ? 'bg-primary text-ink' : 'bg-ink/5 text-ink/50'
+                              )}>
+                                {confession.is_approved ? 'Approved' : 'Pending'}
+                              </span>
+                              {confession.is_flagged && (
+                                <span className="text-[10px] font-black uppercase px-2 py-1 neo-border-sm bg-accent text-bg">
+                                  Flagged
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs opacity-60">
+                            {new Date(confession.created_at).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleApproveConfession(confession.id)}
+                                className="h-8 px-3 inline-flex items-center justify-center gap-1 neo-border-sm bg-primary text-ink hover:bg-secondary transition-all text-[10px] font-black uppercase"
+                              >
+                                <Check size={12} />
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleFlagConfession(confession.id)}
+                                className="h-8 px-3 inline-flex items-center justify-center gap-1 neo-border-sm bg-accent text-bg hover:bg-ink transition-all text-[10px] font-black uppercase"
+                              >
+                                <Flag size={12} />
+                                Flag
+                              </button>
+                              <button
+                                onClick={() => handleDeleteConfession(confession.id)}
+                                className="w-8 h-8 inline-flex items-center justify-center neo-border-sm bg-ink text-bg hover:bg-accent transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="px-4 sm:px-6 py-4 border-t border-ink/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-[10px] font-black uppercase opacity-50 tracking-widest">
+                    Page {confessionsPage} / {totalConfessionsPages} · {filteredConfessions.length} total
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setConfessionsPage((p) => Math.max(1, p - 1))}
+                      disabled={confessionsPage === 1}
+                      className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setConfessionsPage((p) => Math.min(totalConfessionsPages, p + 1))}
+                      disabled={confessionsPage === totalConfessionsPages}
                       className="neo-border-sm bg-white px-3 py-1.5 text-[10px] font-black uppercase disabled:opacity-40"
                     >
                       Next

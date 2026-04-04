@@ -20,6 +20,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SuccessPage } from './pages/SuccessPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { BattleModePage } from './pages/BattleModePage';
+import { ConfessionsPage } from './pages/ConfessionsPage';
 import { AnimatePresence } from 'motion/react';
 
 function ScrollToTop() {
@@ -59,6 +60,7 @@ function AppContent() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/success" element={<SuccessPage />} />
             <Route path="/battle" element={<BattleModePage />} />
+            <Route path="/confessions" element={<ConfessionsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </AnimatePresence>
