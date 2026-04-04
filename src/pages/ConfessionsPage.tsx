@@ -50,6 +50,19 @@ export function ConfessionsPage() {
     loadConfessions();
   }, []);
 
+  useEffect(() => {
+    if (!selectedConfession) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedConfession(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedConfession]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -88,18 +101,23 @@ export function ConfessionsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[120] bg-ink/65 sm:hidden"
+              className="fixed inset-0 z-[120] bg-ink/70 backdrop-blur-[2px] p-4 sm:p-6 flex items-center justify-center"
               onClick={() => setSelectedConfession(null)}
             >
               <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
+                initial={{ y: 20, opacity: 0, scale: 0.98 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 20, opacity: 0, scale: 0.98 }}
                 onClick={(event) => event.stopPropagation()}
-                className="absolute bottom-0 left-0 right-0 bg-bg neo-border rounded-t-2xl p-5 max-h-[78vh] overflow-y-auto"
+                className="w-full max-w-xl max-h-[88vh] overflow-y-auto bg-bg neo-border-lg p-4 sm:p-6"
               >
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <h3 className="text-xl font-display">Confession</h3>
+                <div className="flex items-start justify-between gap-3 mb-5">
+                  <div>
+                    <div className="inline-block bg-accent text-bg px-2 py-1 neo-border-sm text-[10px] uppercase tracking-widest font-black mb-2">
+                      Unrot Confessions
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-display">ANONYMOUS DROP</h3>
+                  </div>
                   <button
                     onClick={() => setSelectedConfession(null)}
                     className="p-2 bg-white neo-border-sm"
@@ -109,13 +127,21 @@ export function ConfessionsPage() {
                   </button>
                 </div>
 
-                <p className="text-base font-bold leading-relaxed whitespace-pre-wrap">{selectedConfession.confession_text}</p>
-                <div className="mt-4 flex items-center justify-between text-[10px] uppercase tracking-widest font-black opacity-60">
+                <div className="neo-card bg-white p-5 sm:p-6">
+                  <p className="text-lg sm:text-2xl font-display leading-snug normal-case">“{selectedConfession.confession_text}”</p>
+                </div>
+
+                <div className="mt-5 flex items-center justify-between text-[10px] uppercase tracking-widest font-black opacity-60">
                   <span className="flex items-center gap-1">
                     <Flame size={12} className="text-accent" />
                     anon #{selectedConfession.id.slice(0, 6)}
                   </span>
                   <time dateTime={selectedConfession.created_at}>{formatConfessionDate(selectedConfession.created_at)}</time>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-ink/20 flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-widest font-black text-ink/50">unrot.space/confessions</p>
+                  <p className="text-[10px] uppercase tracking-widest font-black text-accent">© unrot</p>
                 </div>
               </motion.div>
             </motion.div>
@@ -213,11 +239,7 @@ export function ConfessionsPage() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => {
-                        if (window.innerWidth < 640) {
-                          setSelectedConfession(item);
-                        }
-                      }}
+                      onClick={() => setSelectedConfession(item)}
                       className="w-full text-left bg-bg neo-border-sm p-4 hover:bg-secondary/10 transition-colors"
                     >
                       <p className="text-sm sm:text-base font-bold leading-relaxed">{item.confession_text}</p>
